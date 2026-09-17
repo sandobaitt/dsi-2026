@@ -1,0 +1,86 @@
+@startuml seq_crear_pedido
+!pragma layout smetana
+autonumber "<b>[00]</b>"
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam sequenceArrowThickness 1.5
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+
+' ==============================================================================
+' REALIZACIÓN DEL CASO DE USO: CU-03 Crear Pedido
+' Materia: Diseño de Sistemas (DSI)
+' ==============================================================================
+
+actor "Cliente" as Cliente
+boundary "PantallaCarrito" as View <<Boundary>>
+control "ControladorPedido" as Gestor <<Control>>
+entity "Carrito" as Cart <<Entity>>
+entity "Pedido" as Order <<Entity>>
+entity "Inventario" as Stock <<Entity>>
+participant "PasarelaPagosAdapter" as Gateway <<Boundary / Adapter>>
+database "BaseDeDatos" as DB <<Repository>>
+
+' Flujo Principal
+Cliente -> View: click "Finalizar Compra"
+activate View
+
+View -> Gestor: iniciarCreacionPedido(idCarrito)
+activate Gestor
+
+Gestor -> Cart: obtenerItems()
+activate Cart
+Cart --> Gestor: listaItems
+deactivate Cart
+
+' Bucle para verificar stock
+loop para cada item en listaItems
+    Gestor -> Stock: verificarStock(item.productoId, item.cantidad)
+    activate Stock
+    Stock --> Gestor: stockDisponible (bool)
+    deactivate Stock
+end
+
+Gestor --> View: solicitarDatosPagoYEnvio()
+deactivate Gestor
+
+Cliente -> View: ingresarDatos(direccion, datosTarjeta)
+View -> Gestor: confirmarPedido(datosTarjeta, direccion)
+activate Gestor
+
+' Llamada al servicio externo de pago
+Gestor -> Gateway: procesarPago(datosTarjeta, montoTotal)
+activate Gateway
+Gateway --> Gestor: resultadoPago (APROBADO)
+deactivate Gateway
+
+alt Pago Aprobado
+    Gestor -> Order: new Pedido(items, total, direccion, "APROBADO")
+    activate Order
+    Order --> Gestor: pedidoCreado
+    deactivate Order
+
+    Gestor -> DB: guardar(pedidoCreado)
+    activate DB
+    DB --> Gestor: idPedidoGenerado
+    deactivate DB
+
+    ' Descuento de stock
+    loop para cada item en listaItems
+        Gestor -> Stock: decrementarStock(item.productoId, item.cantidad)
+        activate Stock
+        Stock --> Gestor: confirmacion
+        deactivate Stock
+    end
+
+    Gestor --> View: pedidoExitoso(idPedidoGenerado)
+    View --> Cliente: mostrarPantallaExito(idPedidoGenerado)
+else Pago Rechazado
+    Gestor --> View: notificarRechazo(motivo)
+    View --> Cliente: mostrarMensajeError("Tarjeta rechazada por la entidad bancaria")
+end
+
+deactivate Gestor
+deactivate View
+
+@enduml

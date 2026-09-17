@@ -1,0 +1,12 @@
+# IDE & Editor files
+.idea/
+.vscode/
+*.swp
+*~
+
+# Temporary & cache
+*.log
+.DS_Store
+
+# Java / OS
+*.class

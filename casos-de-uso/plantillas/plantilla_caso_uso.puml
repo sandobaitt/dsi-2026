@@ -1,0 +1,63 @@
+@startuml plantilla_caso_uso
+!pragma layout smetana
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam roundcorner 10
+skinparam actorStyle awesome
+
+' ==============================================================================
+' PLANTILLA: Diagrama de Casos de Uso (UML Estándar)
+' Materia: Diseño de Sistemas (DSI)
+' ==============================================================================
+
+' ------------------------------------------------------------------------------
+' 1. DEFINICIÓN DE ACTORES
+' ------------------------------------------------------------------------------
+' Actores Primarios (Inician la interacción con el sistema)
+actor "Usuario" as ActPrimario
+actor "Administrador" as ActAdmin
+
+' Actores Secundarios / Externos (Sistemas externos, pasarelas de pago, etc.)
+actor "Servicio Externo" as ActSecundario <<Sistema>>
+
+' Generalización de actores (si aplica)
+ActAdmin --|> ActPrimario
+
+' ------------------------------------------------------------------------------
+' 2. LÍMITE DEL SISTEMA Y CASOS DE USO
+' ------------------------------------------------------------------------------
+rectangle "Nombre del Sistema / Módulo" {
+    
+    ' Casos de uso principales (Verbo en infinitivo + Objeto)
+    usecase "CU01: Realizar Operación Principal" as CU01
+    usecase "CU02: Subfunción Compartida" as CU02
+    usecase "CU03: Flujo Opcional / Especial" as CU03
+    usecase "CU04: Operación Administrativa" as CU04
+
+    ' --------------------------------------------------------------------------
+    ' 3. RELACIONES ENTRE CASOS DE USO
+    ' --------------------------------------------------------------------------
+    ' <<include>> : El CU base SIEMPRE ejecuta el CU incluido (flecha hacia el incluido)
+    CU01 ..> CU02 : <<include>>
+
+    ' <<extend>> : El CU extensión agrega comportamiento opcional (flecha hacia el caso base)
+    CU03 ..> CU01 : <<extend>>
+}
+
+' ------------------------------------------------------------------------------
+' 4. ASOCIACIONES ACTOR - CASO DE USO
+' ------------------------------------------------------------------------------
+ActPrimario --> CU01
+ActAdmin --> CU04
+
+' Interacción con actor secundario
+CU01 --> ActSecundario
+
+' Notas explicativas (opcional)
+note right of CU03
+  Punto de Extensión:
+  Al fallar la validación o
+  solicitar método alternativo.
+end note
+
+@enduml

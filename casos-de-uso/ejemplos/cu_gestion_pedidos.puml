@@ -1,0 +1,52 @@
+@startuml cu_gestion_pedidos
+!pragma layout smetana
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam roundcorner 10
+skinparam actorStyle awesome
+
+' ==============================================================================
+' EJEMPLO: Diagrama de Casos de Uso - Módulo de Gestión de Pedidos
+' Materia: Diseño de Sistemas
+' ==============================================================================
+
+left to right direction
+
+actor "Cliente" as Cliente
+actor "Administrador" as Admin
+actor "Pasarela de Pagos" as PasarelaPago <<Sistema Externo>>
+
+Admin --|> Cliente : "hereda permisos de"
+
+rectangle "Sistema de Ventas Online" {
+    
+    usecase "CU-01: Iniciar Sesión" as CU_Login
+    usecase "CU-02: Consultar Catálogo" as CU_Catalogo
+    usecase "CU-03: Crear Pedido" as CU_CrearPedido
+    usecase "CU-04: Procesar Pago" as CU_ProcesarPago
+    usecase "CU-05: Aplicar Cupón de Descuento" as CU_Cupon
+    usecase "CU-06: Gestionar Inventario" as CU_Inventario
+
+    ' Asociaciones básicas
+    Cliente --> CU_Catalogo
+    Cliente --> CU_CrearPedido
+    Admin --> CU_Inventario
+
+    ' Relaciones estereotipadas
+    ' Todo pedido requiere autenticación y procesamiento de pago
+    CU_CrearPedido ..> CU_Login : <<include>>
+    CU_CrearPedido ..> CU_ProcesarPago : <<include>>
+
+    ' Aplicar cupón es opcional dependiente de que el cliente ingrese un cupón
+    CU_Cupon ..> CU_CrearPedido : <<extend>>
+
+    ' Interacción con actor secundario
+    CU_ProcesarPago --> PasarelaPago
+}
+
+note bottom of CU_Cupon
+  Punto de Extensión:
+  Antes de confirmar el monto total
+end note
+
+@enduml

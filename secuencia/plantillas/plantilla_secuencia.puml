@@ -1,0 +1,68 @@
+@startuml plantilla_secuencia
+!pragma layout smetana
+autonumber "<b>[00]</b>"
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam sequenceArrowThickness 1.5
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+
+' ==============================================================================
+' PLANTILLA: Diagrama de Secuencia (UML Estándar)
+' Materia: Diseño de Sistemas (DSI)
+' ==============================================================================
+
+' ------------------------------------------------------------------------------
+' 1. PARTICIPANTES Y ROLES (Arquitectura en Capas / ECB: Entity-Control-Boundary)
+' ------------------------------------------------------------------------------
+actor "Usuario" as User
+boundary "PantallaPrincipal" as UI <<Boundary>>
+control "GestorOperacion" as Ctrl <<Control>>
+entity "EntidadNegocio" as Ent <<Entity>>
+database "BaseDeDatos" as DB <<Repository>>
+
+' ------------------------------------------------------------------------------
+' 2. MENSAJES Y FLUJO DE EVENTOS
+' ------------------------------------------------------------------------------
+User -> UI: 1. Iniciar acción(datosEntrada)
+activate UI
+
+UI -> Ctrl: 2. procesarSolicitud(datosEntrada)
+activate Ctrl
+
+Ctrl -> Ent: 3. validarReglasNegocio()
+activate Ent
+Ent --> Ctrl: 4. resultadoValidacion(ok)
+deactivate Ent
+
+' Fragmento condicional (Alternativas: Éxito vs Error)
+alt Validación Exitosa
+    Ctrl -> DB: 5. guardarRegistro(datos)
+    activate DB
+    DB --> Ctrl: 6. confirmacionGuardado()
+    deactivate DB
+
+    Ctrl --> UI: 7. respuestaExitosa(idOperacion)
+    UI --> User: 8. Mostrar mensaje de confirmación
+else Validación Fallida
+    Ctrl --> UI: 7a. notificarError(motivo)
+    UI --> User: 8a. Mostrar alerta de error
+end
+
+' Fragmento condicional opcional
+opt Usuario solicita comprobante digital
+    User -> UI: solicitarComprobante()
+    UI -> Ctrl: generarComprobantePDF()
+    Ctrl --> UI: archivoPDF
+    UI --> User: Descargar archivo
+end
+
+' Fragmento de repetición (Bucle)
+loop Para cada ítem en el detalle
+    Ctrl -> Ent: calcularSubtotal(item)
+end
+
+deactivate Ctrl
+deactivate UI
+
+@enduml
