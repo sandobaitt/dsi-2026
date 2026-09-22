@@ -1,0 +1,90 @@
+@startuml ejemplo_secuencia_catedra
+!pragma layout smetana
+autonumber "<b>[00]</b>"
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam sequenceArrowThickness 1.5
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+
+' ==============================================================================
+' EJEMPLO MODELO DE CÁTEDRA: Caso de Uso "Consultar Turnos Asignados"
+' Cumple al 100% con las reglas y correcciones de la cátedra de DSI
+' ==============================================================================
+
+' 1. Participantes ordenados de izquierda a derecha
+actor "Médico" as Actor
+boundary "PantallaConsultaTurnos" as UI <<Boundary>>
+control "CTRLConsultarTurnos" as CTRLCU <<Control>>
+control "CTRLSesion" as CTRLSesion <<Control>>
+participant "Sistema" as Sistema <<Sistema>>
+collections "Turno" as Turnos <<Entity>>
+entity "listaTurnosDTO" as ListaTemp <<Lista Temporal>>
+
+' ------------------------------------------------------------------------------
+' FLUJO PRINCIPAL
+' ------------------------------------------------------------------------------
+
+' El actor no ingresa su legajo manualmente; el sistema lo extrae de la sesión
+Actor -> UI: 1. click "Ver Mis Turnos"
+activate UI
+
+UI -> CTRLCU: 2. iniciarConsulta()
+activate CTRLCU
+
+' Regla: CTRLCU extrae credenciales de CTRLSesion (instancia preexistente)
+CTRLCU -> CTRLSesion: 3. obtenerLegajoUsuarioLogueado()
+activate CTRLSesion
+CTRLSesion --> CTRLCU: 4. legajoMedico
+deactivate CTRLSesion
+
+' Regla: CTRL a Sistema utiliza verbos en español como "obtener...()" (NO "get")
+CTRLCU -> Sistema: 5. obtenerTurnosPorMedico(legajoMedico)
+activate Sistema
+
+' Regla: Sistema es el único responsable de crear e instanciar la lista temporal
+create ListaTemp
+Sistema -> ListaTemp: 6. create()
+
+' Bucle sobre la colección de entidades
+loop para cada turno en coleccionTurnos
+    ' Regla: Sistema a Entidad utiliza "get...()" para consultar atributos
+    Sistema -> Turnos: 7. getLegajoMedico()
+    activate Turnos
+    Turnos --> Sistema: 8. legajoAsignado
+    deactivate Turnos
+
+    opt legajoAsignado == legajoMedico
+        Sistema -> Turnos: 9. getFecha()
+        activate Turnos
+        Turnos --> Sistema: 10. fecha
+        deactivate Turnos
+
+        Sistema -> Turnos: 11. getHora()
+        activate Turnos
+        Turnos --> Sistema: 12. hora
+        deactivate Turnos
+
+        Sistema -> Turnos: 13. getEstado()
+        activate Turnos
+        Turnos --> Sistema: 14. estado
+        deactivate Turnos
+
+        ' Sistema agrega el elemento a la lista que ya referencia
+        Sistema -> ListaTemp: 15. add(dtoTurno)
+    end
+end
+
+' Regla: NO hay mensaje de retorno desde ListaTemp hacia Sistema
+' Regla: NO se usa destroy para listas temporales (parcial friendly)
+' Regla: Retorno mediante línea punteada sin la palabra "return"
+Sistema --> CTRLCU: 16. listaTurnosDTO
+deactivate Sistema
+
+CTRLCU --> UI: 17. mostrarTurnos(listaTurnosDTO)
+deactivate CTRLCU
+
+UI --> Actor: 18. Despliega grilla con los turnos encontrados
+deactivate UI
+
+@enduml
