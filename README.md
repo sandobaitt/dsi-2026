@@ -1,7 +1,7 @@
-# DSI 2026 - Diseño de Sistemas (UML con PlantUML)
+# DSI 2026 - Diseño de Sistemas (UML, CRC y Casos de Uso)
 
-Repositorio de trabajo para la materia **Diseño de Sistemas (2026)**.
-Incluye entorno automatizado para diagramado con **PlantUML**, generación de gráficos vectoriales **SVG** en tiempo real, plantillas y especificaciones formales de **Casos de Uso** y **Diagramas de Secuencia**.
+Repositorio integral de trabajo para la materia **Diseño de Sistemas (2026)**.
+Contiene plantillas formales, ejemplos resueltos interconectados y automatización de renderizado vectorial **SVG** mediante **PlantUML** y scripts Bash.
 
 ---
 
@@ -9,17 +9,15 @@ Incluye entorno automatizado para diagramado con **PlantUML**, generación de gr
 
 El script [`render.sh`](file:///home/sando/Documents/dsi-2026/render.sh) compila de forma automática cualquier diagrama `.puml` a formato vectorial `.svg` (o PNG si se prefiere).
 
-### Comandos más usados
-
 ```bash
-# 1. Compilar TODOS los diagramas del proyecto a SVG
+# 1. Compilar TODOS los diagramas del proyecto a SVG (casos de uso, secuencia, clases)
 ./render.sh
 
-# 2. Compilar un diagrama específico
-./render.sh secuencia/ejemplos/seq_crear_pedido.puml
+# 2. Compilar un diagrama puntual
+./render.sh clases/ejemplos/clases_gestion_pedidos.puml
 
-# 3. Compilar todos los diagramas de una carpeta
-./render.sh casos-de-uso/
+# 3. Compilar todos los diagramas de una carpeta específica
+./render.sh clases/
 
 # 4. Modo Observador (Watch Mode): Re-compila automáticamente al guardar cambios
 ./render.sh -w
@@ -28,68 +26,82 @@ El script [`render.sh`](file:///home/sando/Documents/dsi-2026/render.sh) compila
 ./render.sh -f png secuencia/ejemplos/seq_crear_pedido.puml
 ```
 
-> **Consejo para visualización:** En Linux / Pop!_OS puedes abrir cualquier SVG en tu navegador o visor de imágenes ejecutando:
+> **Visualización rápida:** En Linux / Pop!_OS puedes abrir cualquier SVG en tu visor preferido o navegador:
 > ```bash
-> xdg-open casos-de-uso/ejemplos/cu_gestion_pedidos.svg
+> xdg-open clases/ejemplos/clases_gestion_pedidos.svg
 > ```
-> O previsualizarlo directamente en el IDE.
 
 ---
 
-## 📂 Estructura del Repositorio
+## 📂 Estructura Completa del Proyecto
+
+El repositorio está organizado en 5 áreas clave del diseño orientado a objetos:
 
 ```text
 dsi-2026/
 ├── bin/
-│   └── plantuml                     # Wrapper ejecutable de PlantUML con motor Smetana integrado
-├── render.sh                        # Script Bash principal para renderizar a SVG
-├── casos-de-uso/
+│   └── plantuml                             # Wrapper CLI ejecutable de PlantUML (motor Smetana)
+├── render.sh                                # Script Bash principal para compilar diagramas a SVG
+│
+├── casos-de-uso/                            # 1. DIAGRAMAS DE CASOS DE USO
 │   ├── plantillas/
-│   │   ├── plantilla_caso_uso.puml        # Plantilla PlantUML para Diagramas de Casos de Uso
-│   │   └── plantilla_especificacion_cu.md # Plantilla formal para especificaciones de Casos de Uso
+│   │   └── plantilla_caso_uso.puml          # Plantilla UML (Actores, límites, <<include>>, <<extend>>)
 │   └── ejemplos/
-│       ├── cu_gestion_pedidos.puml        # Ejemplo: Diagrama de Casos de Uso (incluye <<include>>, <<extend>>)
-│       ├── cu_gestion_pedidos.svg         # SVG generado automáticamente
-│       └── especificacion_cu_crear_pedido.md # Especificación formal paso a paso del CU-03
-├── secuencia/
+│       ├── cu_gestion_pedidos.puml          # Diagrama resuelto del módulo de pedidos
+│       └── cu_gestion_pedidos.svg           # Gráfico SVG vectorial compilado
+│
+├── descripcion-casos-de-uso/                # 2. DESCRIPCIÓN Y ESPECIFICACIÓN DE CU
 │   ├── plantillas/
-│   │   └── plantilla_secuencia.puml       # Plantilla con arquitectura ECB, autonumber y fragmentos
+│   │   └── plantilla_descripcion_cu.md      # Plantilla académica (Pre/Post, Camino feliz, Alternativas)
 │   └── ejemplos/
-│       ├── seq_crear_pedido.puml          # Realización del CU-03 Crear Pedido en diagrama de secuencia
-│       └── seq_crear_pedido.svg           # SVG generado automáticamente
+│       └── descripcion_cu_crear_pedido.md   # Especificación formal paso a paso del CU-03
+│
+├── tarjetas-crc/                            # 3. TARJETAS CRC (Clase - Responsabilidad - Colaborador)
+│   ├── plantillas/
+│   │   └── plantilla_tarjeta_crc.md         # Plantilla con formato Anverso (Frente) / Reverso (Dorso)
+│   └── ejemplos/
+│       └── crc_gestion_pedidos.md           # Tarjetas CRC de Pedido, Detalle, Producto, Cliente, etc.
+│
+├── secuencia/                               # 4. DIAGRAMAS DE SECUENCIA
+│   ├── plantillas/
+│   │   └── plantilla_secuencia.puml         # Plantilla con ECB, CTRLSesion, autonumber y fragmentos
+│   └── ejemplos/
+│       ├── seq_crear_pedido.puml            # Realización técnica del CU-03
+│       └── seq_crear_pedido.svg             # Gráfico SVG vectorial compilado
+│
+├── clases/                                  # 5. DIAGRAMAS DE CLASES
+│   ├── plantillas/
+│   │   └── plantilla_diagrama_clases.puml   # Plantilla UML (Entidades, Control, Límites, asociativas)
+│   └── ejemplos/
+│       ├── clases_gestion_pedidos.puml      # Modelo de clases del dominio y control
+│       └── clases_gestion_pedidos.svg       # Gráfico SVG vectorial compilado
+│
+├── .agents/skills/dsi-secuencia/            # Skill de cátedra de DSI para el asistente
+│   ├── SKILL.md                             # Reglas de oro y criterios de parcial
+│   ├── references/pautas_catedra.md         # Fundamentos teóricos y consultas docentes
+│   └── examples/ejemplo_secuencia_catedra.puml # Ejemplo que aplica las pautas de cátedra
 └── README.md
 ```
 
 ---
 
-## 📐 Guía de Diagramas y Buenas Prácticas
+## 📇 Formato de Tarjetas CRC
 
-### 1. Diagramas de Casos de Uso
-- **Actores:** Nombrados con roles claros en singular (*Cliente*, *Cajero*).
-  - Actores primarios a la izquierda (inician el valor).
-  - Actores secundarios o externos a la derecha (servicios de apoyo).
-- **Casos de Uso:** Nombrados siempre con **Verbo en infinitivo + Sustantivo** (ej: *Registrar Cliente*, *Emitir Factura*).
-- **Relaciones:**
-  - `<<include>>`: El caso de uso base siempre delega o requiere la ejecución del CU incluido (la flecha punteada apunta hacia el caso incluido).
-  - `<<extend>>`: Comportamiento opcional o condicional bajo un punto de extensión (la flecha apunta hacia el caso base).
+Cada tarjeta CRC sigue estrictamente la convención pedagógica de doble faz:
 
-### 2. Especificación Textual de Casos de Uso
-- Usar la plantilla en [`casos-de-uso/plantillas/plantilla_especificacion_cu.md`](file:///home/sando/Documents/dsi-2026/casos-de-uso/plantillas/plantilla_especificacion_cu.md).
-- Detallar claramente **Precondiciones**, **Garantías de Éxito**, **Flujo Principal (Paso a paso Actor vs Sistema)** y **Flujos Alternativos / Excepcionales**.
+- **Anverso (Frente):**
+  - **Nombre de la clase:** Identificador único de la clase.
+  - **Propósito:** Descripción breve y clara del rol que cumple dentro del dominio del problema.
+- **Reverso (Dorso):**
+  - **Responsabilidades:** Qué tareas sabe realizar (*Hacer*) y qué información conoce (*Saber*).
+  - **Colaboradores:** Otras clases con las que interactúa para cumplir sus tareas (quién le pide servicios o a quién ella debe pedir servicios).
 
-### 3. Diagramas de Secuencia
-- Usar la plantilla en [`secuencia/plantillas/plantilla_secuencia.puml`](file:///home/sando/Documents/dsi-2026/secuencia/plantillas/plantilla_secuencia.puml).
-- Estructuración recomendada: **Arquitectura en Capas o ECB (Entity - Control - Boundary)**.
-- Activar y desactivar líneas de vida (`activate`, `deactivate`).
-- Emplear fragmentos combinados estándar:
-  - `alt` / `else`: Alternativas condicionales (ej: pago aprobado vs rechazado).
-  - `opt`: Acciones opcionales.
-  - `loop`: Bucles de procesamiento (ej: recorrer ítems de un pedido).
+Ver [`tarjetas-crc/plantillas/plantilla_tarjeta_crc.md`](file:///home/sando/Documents/dsi-2026/tarjetas-crc/plantillas/plantilla_tarjeta_crc.md) y [`tarjetas-crc/ejemplos/crc_gestion_pedidos.md`](file:///home/sando/Documents/dsi-2026/tarjetas-crc/ejemplos/crc_gestion_pedidos.md).
 
 ---
 
-## 🛠️ Configuración Interna
+## 📐 Coherencia Trazable entre Modelos
 
-- **PlantUML JAR:** `~/.local/share/plantuml/plantuml.jar` (v1.2026.8).
-- **Motor de Maquetado:** Smetana (incorporado en Java puro, no requiere dependencias de sistema adicionales).
-- **CLI Global:** Disponible en terminal mediante el comando `plantuml`.
+Todos los ejemplos incluidos corresponden al mismo problema (**Gestión de Pedidos de Comercio Electrónico**), demostrando la trazabilidad completa requerida en Diseño de Sistemas:
+
+$$\text{Diagrama CU} \longleftrightarrow \text{Descripción CU} \longleftrightarrow \text{Tarjetas CRC} \longleftrightarrow \text{Diagrama de Secuencia} \longleftrightarrow \text{Diagrama de Clases}$$

@@ -1,0 +1,119 @@
+@startuml plantilla_diagrama_clases
+!pragma layout smetana
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+
+' ==============================================================================
+' PLANTILLA: Diagrama de Clases (UML Estándar)
+' Materia: Diseño de Sistemas (DSI)
+' ==============================================================================
+
+' ------------------------------------------------------------------------------
+' 1. CAPA DE INTERFAZ Y CONTROLADORES
+' ------------------------------------------------------------------------------
+package "Capa de Presentación y Control" {
+    class "PantallaOperacion" as UI <<Boundary>> {
+        + mostrarDatos(lista: List): void
+        + solicitarConfirmacion(): void
+        + notificarError(mensaje: String): void
+    }
+
+    class "CTRLCasoDeUso" as CTRLCU <<Control>> {
+        - idSesion: int
+        + iniciarOperacion(): void
+        + procesarSeleccion(id: int): void
+        + confirmarOperacion(): boolean
+    }
+
+    class "CTRLSesion" as CTRLSesion <<Control>> {
+        - usuarioActivo: Usuario
+        - tokenSesion: String
+        + obtenerUsuarioLogueado(): Usuario
+        + obtenerLegajo(): String
+    }
+
+    class "Sistema" as Sistema <<Fachada / Sistema>> {
+        + obtenerEntidadesDisponibles(): List
+        + registrarNuevaTransaccion(datos: DTO): boolean
+    }
+}
+
+' ------------------------------------------------------------------------------
+' 2. CAPA DE DOMINIO (ENTIDADES Y RELACIONES)
+' ------------------------------------------------------------------------------
+package "Capa de Dominio" {
+    
+    abstract class "Persona" as Persona <<Entity>> {
+        # nombre: String
+        # apellido: String
+        # dni: String
+        + getNombreCompleto(): String
+    }
+
+    class "RolUsuario" as Rol <<Entity>> {
+        - nombreRol: String
+        - permisos: List<String>
+        + tienePermiso(permiso: String): boolean
+    }
+
+    class "EntidadPrincipal" as EntidadA <<Entity>> {
+        - codigo: String
+        - descripcion: String
+        - estado: String
+        + getCodigo(): String
+        + estaHabilitado(): boolean
+    }
+
+    class "EntidadSecundaria" as EntidadB <<Entity>> {
+        - id: int
+        - montoUnitario: double
+        + getMontoUnitario(): double
+    }
+
+    ' Clase asociativa / transacción que vincula a las entidades del sistema
+    class "Transaccion" as Transaccion <<Entity>> {
+        - nroTransaccion: int
+        - fechaHora: DateTime
+        - montoTotal: double
+        - estado: String
+        + calcularMontoTotal(): double
+        + confirmar(): void
+    }
+
+    class "DetalleTransaccion" as Detalle <<Entity>> {
+        - cantidad: int
+        - precioHistorico: double
+        + calcularSubtotal(): double
+    }
+}
+
+' ------------------------------------------------------------------------------
+' 3. RELACIONES ENTRE CLASES
+' ------------------------------------------------------------------------------
+
+' Dependencias de Control
+UI ..> CTRLCU : invoca eventos >
+CTRLCU --> CTRLSesion : consulta sesión >
+CTRLCU --> Sistema : delega operaciones >
+
+' Conexión del Sistema con el Dominio
+Sistema o-- "*" Transaccion : administra colección
+Sistema o-- "*" EntidadA : busca instancias
+
+' Herencia / Generalización
+Persona <|-- Rol
+
+' Asociaciones y Composiciones
+EntidadA "1" -- "*" Transaccion : participa en >
+Transaccion "1" *-- "1..*" Detalle : compuesta por >
+Detalle "*" --> "1" EntidadB : referencia a >
+
+note right of Transaccion
+  Clase asociativa o transacción
+  que relaciona y resuelve las
+  entidades clave del dominio.
+end note
+
+@enduml

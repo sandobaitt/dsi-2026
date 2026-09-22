@@ -1,0 +1,117 @@
+@startuml clases_gestion_pedidos
+!pragma layout smetana
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+
+' ==============================================================================
+' EJEMPLO: Diagrama de Clases - Módulo Gestión de Pedidos
+' Materia: Diseño de Sistemas (DSI)
+' Coherente con CU-03 Crear Pedido y Diagrama de Secuencia seq_crear_pedido
+' ==============================================================================
+
+package "Capa de Presentación y Control" {
+    class "PantallaCarrito" as UI <<Boundary>> {
+        + mostrarItemsCarrito(items: List): void
+        + solicitarDatosEntrega(): void
+        + mostrarConfirmacion(nroPedido: int): void
+        + mostrarError(mensaje: String): void
+    }
+
+    class "ControladorPedido" as CTRLCU <<Control>> {
+        + iniciarCreacionPedido(idCarrito: int): void
+        + confirmarPedido(datosPago: DatosPago, direccion: String): int
+    }
+
+    class "ControladorSesion" as CTRLSesion <<Control>> {
+        - usuarioLogueado: Usuario
+        + obtenerUsuarioLogueado(): Usuario
+        + obtenerLegajo(): String
+    }
+
+    class "Sistema" as Sistema <<Fachada / Sistema>> {
+        + obtenerItemsCarrito(idCarrito: int): List<ItemDTO>
+        + verificarStock(idProducto: int, cantidad: int): boolean
+        + registrarPedido(cliente: Cliente, items: List, total: double): int
+    }
+}
+
+package "Capa de Dominio" {
+    class "Cliente" as Cliente <<Entity>> {
+        - idCliente: int
+        - nombre: String
+        - email: String
+        - direccion: String
+        + getNombre(): String
+        + getDireccion(): String
+    }
+
+    ' Clase central de transacción que relaciona Cliente, Producto (vía Detalle) y Factura
+    class "Pedido" as Pedido <<Entity>> {
+        - nroPedido: int
+        - fechaCreacion: DateTime
+        - estado: String
+        - montoTotal: double
+        - direccionEntrega: String
+        + calcularTotal(): double
+        + confirmarPago(): void
+        + cancelar(): void
+        + getNroPedido(): int
+    }
+
+    class "DetallePedido" as DetallePedido <<Entity>> {
+        - cantidad: int
+        - precioUnitarioHistorico: double
+        + calcularSubtotal(): double
+        + getCantidad(): int
+    }
+
+    class "Producto" as Producto <<Entity>> {
+        - idProducto: int
+        - nombre: String
+        - descripcion: String
+        - precioActual: double
+        - stockActual: int
+        + getPrecioActual(): double
+        + getStockActual(): int
+        + tieneStockSuficiente(cantidad: int): boolean
+        + decrementarStock(cantidad: int): void
+    }
+
+    class "Factura" as Factura <<Entity>> {
+        - nroComprobante: String
+        - fechaEmision: DateTime
+        - cuit: String
+        - importeTotal: double
+        + emitir(): void
+    }
+}
+
+' ------------------------------------------------------------------------------
+' RELACIONES
+' ------------------------------------------------------------------------------
+
+' Flujo de Control
+UI ..> CTRLCU : invoca
+CTRLCU --> CTRLSesion : consulta sesión
+CTRLCU --> Sistema : delega operaciones
+
+' Sistema administra las colecciones
+Sistema o-- "*" Pedido : pedidosRegistrados
+Sistema o-- "*" Producto : catalogoProductos
+
+' Relaciones del Modelo de Dominio
+Cliente "1" -- "*" Pedido : realiza >
+Pedido "1" *-- "1..*" DetallePedido : contiene >
+DetallePedido "*" --> "1" Producto : referencia a >
+Pedido "1" -- "0..1" Factura : genera >
+
+note bottom of Pedido
+  **Clase Transaccional del Sistema:**
+  Relaciona directamente al Cliente,
+  a los Productos (mediante DetallePedido)
+  y a la Factura emitida.
+end note
+
+@enduml
