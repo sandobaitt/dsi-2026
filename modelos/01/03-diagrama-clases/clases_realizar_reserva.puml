@@ -1,0 +1,118 @@
+@startuml clases_realizar_reserva
+!pragma layout smetana
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+
+' ==============================================================================
+' DIAGRAMA DE CLASES: Realización de CU "Realizar Reserva" (Reserva Paga)
+' Aplicación: Artify - Materia: Diseño de Sistemas (DSI 2026)
+' - Se incluyen ÚNICAMENTE las clases involucradas en el caso de uso analizado.
+' - REGLA DE CÁTEDRA: UI y Controladores NO llevan atributos.
+' - Clases de dominio con atributos privados (-) y métodos públicos (+).
+' - Coherencia biunívoca con los métodos invocados en el Diagrama de Secuencia.
+' ==============================================================================
+
+package "Capa de Presentación y Control" {
+    
+    ' UI: Sin atributos. Responsable de interacción con el usuario.
+    class "PantallaReserva" as UI <<Boundary>> {
+        + mostrarFormularioPago(montoTotal: double): void
+        + mostrarReservaConfirmada(nroReserva: int): void
+        + mostrarMensajeError(mensaje: String): void
+    }
+
+    ' Controlador del CU: Sin atributos. Coordina el flujo.
+    class "CTRLRealizarReserva" as CTRL <<Control>> {
+        + iniciarReserva(idEvento: int, cantidad: int): void
+        + confirmarPagoReserva(datosPago: String): void
+    }
+
+    ' Controlador de Sesión: Sin atributos. Provee credenciales del usuario activo.
+    class "CTRLSesion" as CTRLSesion <<Control>> {
+        + obtenerUsuarioLogueado(): Usuario
+        + obtenerIdUsuario(): int
+    }
+
+    ' Sistema: Fachada de negocio. Conoce colecciones y administra persistencia.
+    class "Sistema" as Sistema <<Sistema>> {
+        + verificarDisponibilidad(idEvento: int, cantidad: int): boolean
+        + calcularMontoTotal(idEvento: int, cantidad: int): double
+        + registrarReserva(usuario: Usuario, idEvento: int, cantidad: int): int
+        + decrementarDisponibilidad(idEvento: int, cantidad: int): void
+    }
+}
+
+package "Capa de Dominio" {
+    
+    class "Usuario" as Usuario <<Entity>> {
+        - idUsuario: int
+        - nombre: String
+        - email: String
+        + getIdUsuario(): int
+        + getNombre(): String
+        + getEmail(): String
+    }
+
+    class "Evento" as Evento <<Entity>> {
+        - idEvento: int
+        - titulo: String
+        - tipo: String
+        - fechaHora: DateTime
+        - ubicacion: String
+        - precioEntrada: double
+        - cupoDisponible: int
+        + getIdEvento(): int
+        + getTitulo(): String
+        + getPrecioEntrada(): double
+        + tieneDisponibilidad(cantidad: int): boolean
+        + decrementarCupo(cantidad: int): void
+    }
+
+    ' Clase transaccional que relaciona al Usuario, Evento y Entradas
+    class "Reserva" as Reserva <<Entity>> {
+        - nroReserva: int
+        - fechaHoraReserva: DateTime
+        - estado: String
+        - montoTotal: double
+        + calcularMontoTotal(): double
+        + confirmar(): void
+        + getNroReserva(): int
+    }
+
+    class "Entrada" as Entrada <<Entity>> {
+        - codigoEntrada: String
+        - ubicacionAsiento: String
+        - precio: double
+        + getPrecio(): double
+        + getUbicacionAsiento(): String
+    }
+}
+
+' ------------------------------------------------------------------------------
+' RELACIONES
+' ------------------------------------------------------------------------------
+
+' Flujo de Control y Dependencias
+UI ..> CTRL : invoca eventos >
+CTRL --> CTRLSesion : consulta sesión >
+CTRL --> Sistema : delega operaciones de negocio >
+
+' Sistema conoce y administra las colecciones
+Sistema o-- "*" Evento : eventosRegistrados
+Sistema o-- "*" Reserva : reservasRegistradas
+
+' Relaciones del Modelo de Dominio
+Usuario "1" -- "*" Reserva : realiza >
+Reserva "*" --> "1" Evento : corresponde a >
+Reserva "1" *-- "1..*" Entrada : compuesta por >
+
+note bottom of Reserva
+  **Clase Transaccional del CU:**
+  Relaciona directamente al Usuario
+  con el Evento reservado y
+  las Entradas asignadas.
+end note
+
+@enduml

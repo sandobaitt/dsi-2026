@@ -1,87 +1,120 @@
-# Ejemplo: Tarjetas CRC - Módulo de Gestión de Pedidos
+# Ejemplo: Tarjetas CRC - Realización de CU-03 Crear Pedido
 
-Tarjetas CRC correspondientes al caso de uso **CU-03 Crear Pedido** y coherentes con el Diagrama de Clases y el Diagrama de Secuencia.
-
----
-
-### Tarjeta 1: `Pedido`
-
-#### 📇 Anverso (Frente)
-- **Nombre de la clase:** `Pedido`
-- **Propósito:** Representa la transacción comercial que formaliza la solicitud de compra realizada por un cliente, coordinando los ítems adquiridos, el cálculo del total monetario y su ciclo de vida de estados.
-
-#### 🔄 Reverso (Dorso)
-
-| Responsabilidades | Colaboradores |
-| :--- | :--- |
-| **Saber:**<br>- Número único de pedido (`nroPedido`).<br>- Fecha y hora de creación (`fechaCreacion`).<br>- Estado de la transacción (`estado`: Pendiente, Aprobado, Cancelado).<br>- Monto total consolidado (`montoTotal`).<br>- Dirección de entrega asignada (`direccionEntrega`).<br><br>**Hacer:**<br>- Calcular el importe total sumando los subtotales de sus detalles.<br>- Confirmar la aprobación del pedido tras recibir confirmación de pago.<br>- Cancelar el pedido en caso de rechazo o timeout.<br>- Proveer su identificador para la facturación. | - **Cliente:** A quién pertenece la orden de compra.<br>- **DetallePedido:** A quien le solicita el cálculo del subtotal de cada ítem.<br>- **Factura:** A quien provee información para generar el comprobante fiscal.<br>- **Sistema / ControladorPedido:** Quien le solicita la creación y confirmación. |
+Tarjetas CRC correspondientes a la totalidad de las clases participantes en el Diagrama de Clases y Diagrama de Secuencia del **CU-03 Crear Pedido**.
 
 ---
 
-### Tarjeta 2: `DetallePedido`
+### Tarjeta 1: `PantallaCarrito` (UI)
 
 #### 📇 Anverso (Frente)
-- **Nombre de la clase:** `DetallePedido`
-- **Propósito:** Registrar la cantidad y el precio unitario histórico convenido de un producto específico dentro de un pedido determinado.
+* **Clase:** `PantallaCarrito`
+* **Propósito:** Interfaz de usuario responsable de capturar los eventos del cliente y desplegar la información, confirmaciones y mensajes del caso de uso.
 
 #### 🔄 Reverso (Dorso)
-
-| Responsabilidades | Colaboradores |
+| Responsabilidades | Colaboración |
 | :--- | :--- |
-| **Saber:**<br>- Cantidad de unidades solicitadas (`cantidad`).<br>- Precio unitario histórico al momento de la compra (`precioUnitarioHistorico`).<br><br>**Hacer:**<br>- Calcular su propio subtotal (`cantidad * precioUnitarioHistorico`).<br>- Informar el producto al cual hace referencia. | - **Pedido:** Quien lo contiene y le solicita el subtotal.<br>- **Producto:** A quien consulta para conocer el producto asociado. |
+| **Hacer:**<br>- Solicitar y capturar datos de entrega y pago.<br>- Mostrar confirmación exitosa con número de pedido.<br>- Mostrar mensaje de error si el pago es rechazado o el stock es insuficiente.<br><br>**Saber:**<br>- *No posee atributos de estado (Regla de Cátedra).* | - **ControladorPedido:** A quien le delega los eventos iniciados por el cliente. |
 
 ---
 
-### Tarjeta 3: `Producto`
+### Tarjeta 2: `ControladorPedido` (CTRL)
 
 #### 📇 Anverso (Frente)
-- **Nombre de la clase:** `Producto`
-- **Propósito:** Mantener la información del catálogo comercial, precio vigente y control de inventario/existencias disponibles para la venta.
+* **Clase:** `ControladorPedido`
+* **Propósito:** Coordinar el flujo de ejecución del caso de uso Crear Pedido entre la interfaz, la sesión activa y el sistema.
 
 #### 🔄 Reverso (Dorso)
-
-| Responsabilidades | Colaboradores |
+| Responsabilidades | Colaboración |
 | :--- | :--- |
-| **Saber:**<br>- Identificador de producto (`idProducto`).<br>- Nombre y descripción comercial.<br>- Precio de venta actual (`precioActual`).<br>- Cantidad de unidades disponibles en stock (`stockActual`).<br><br>**Hacer:**<br>- Validar si cuenta con existencias suficientes para satisfacer una demanda (`tieneStockSuficiente(cantidad)`).<br>- Decrementar el inventario físico al confirmarse una venta (`decrementarStock(cantidad)`).<br>- Proveer el precio vigente para la cotización de pedidos. | - **Sistema:** Quien le solicita verificar existencias y decrementar stock.<br>- **DetallePedido:** Quien toma su precio al instanciarse. |
+| **Hacer:**<br>- Iniciar la creación del pedido.<br>- Consultar el usuario autenticado al controlador de sesión.<br>- Solicitar validación y cobro a la entidad bancaria.<br>- Solicitar a Sistema la validación de inventario y el registro del pedido.<br>- Informar el resultado a la pantalla.<br><br>**Saber:**<br>- *No posee atributos de estado (Regla de Cátedra).* | - **PantallaCarrito:** A quien responde con el resultado del flujo.<br>- **ControladorSesion:** A quien consulta las credenciales del usuario activo.<br>- **Sistema:** A quien delega las operaciones de negocio y persistencia.<br>- **Entidad Bancaria (Actor Externo):** A quien solicita validar y autorizar el pago con tarjeta. |
 
 ---
 
-### Tarjeta 4: `Cliente`
+### Tarjeta 3: `ControladorSesion` (CTRL)
 
 #### 📇 Anverso (Frente)
-- **Nombre de la clase:** `Cliente`
-- **Propósito:** Representar al actor del negocio que efectúa transacciones de compra, manteniendo su perfil, historial y datos de contacto y entrega.
+* **Clase:** `ControladorSesion`
+* **Propósito:** Proveer el contexto de autenticación y datos del usuario activo para evitar solicitar información ya conocida por el sistema.
 
 #### 🔄 Reverso (Dorso)
-
-| Responsabilidades | Colaboradores |
+| Responsabilidades | Colaboración |
 | :--- | :--- |
-| **Saber:**<br>- Identificador de cliente (`idCliente`).<br>- Nombre completo y correo electrónico.<br>- Domicilio principal de entrega.<br><br>**Hacer:**<br>- Proveer los datos de contacto y facturación.<br>- Asociar los pedidos generados a su historial de compras. | - **Pedido:** Quien conoce al cliente titular de la orden.<br>- **Sistema:** Quien recupera al cliente a partir de la sesión. |
+| **Hacer:**<br>- Proveer la instancia del usuario o cliente autenticado.<br>- Proveer el identificador o legajo de la sesión.<br><br>**Saber:**<br>- *No posee atributos de estado en la modelación de la realización (Regla de Cátedra).* | - **ControladorPedido:** Quien le solicita los datos del usuario logueado. |
 
 ---
 
-### Tarjeta 5: `ControladorPedido`
+### Tarjeta 4: `Sistema` (Fachada)
 
 #### 📇 Anverso (Frente)
-- **Nombre de la clase:** `ControladorPedido`
-- **Propósito:** Orquestar el flujo de control del caso de uso *Crear Pedido*, mediando entre los eventos de la interfaz de usuario y las operaciones de la fachada del sistema.
+* **Clase:** `Sistema`
+* **Propósito:** Actuar como Fachada global y coordinador de negocio; administra las colecciones principales y realiza búsquedas y altas de transacciones.
 
 #### 🔄 Reverso (Dorso)
-
-| Responsabilidades | Colaboradores |
+| Responsabilidades | Colaboración |
 | :--- | :--- |
-| **Saber:**<br>- Estado actual del flujo de checkout.<br><br>**Hacer:**<br>- Recibir las acciones de la pantalla del carrito (`PantallaCarrito`).<br>- Consultar las credenciales activas al controlador de sesión (`CTRLSesion`).<br>- Solicitar la validación de inventario y registro de orden a `Sistema`.<br>- Devolver el resultado de la transacción a la vista. | - **PantallaCarrito:** Quien le delega los eventos del usuario.<br>- **CTRLSesion:** A quien le pide el usuario logueado.<br>- **Sistema:** A quien le solicita la ejecución de la lógica de negocio. |
+| **Hacer:**<br>- Obtener y verificar stock de los productos del carrito.<br>- Crear e instanciar listas temporales de presentación.<br>- Registrar y persistir la nueva instancia de Pedido.<br>- Decrementar el stock físico de los productos vendidos.<br><br>**Saber:**<br>- Colección global de productos en catálogo.<br>- Colección global de pedidos registrados. | - **ControladorPedido:** Quien le solicita las operaciones del CU.<br>- **Producto:** A quien consulta stock y solicita decrementar inventario.<br>- **Pedido:** A quien instancia y agrega a su colección.<br>- **Cliente:** A quien asocia con el nuevo pedido. |
 
 ---
 
-### Tarjeta 6: `Sistema`
+### Tarjeta 5: `Pedido` (Dominio - Transacción)
 
 #### 📇 Anverso (Frente)
-- **Nombre de la clase:** `Sistema`
-- **Propósito:** Actuar como Fachada (*Facade*) y controlador central de operaciones de negocio del subsistema de ventas, administrando las colecciones de entidades y la coordinación de transacciones.
+* **Clase:** `Pedido`
+* **Propósito:** Entidad transaccional central que relaciona al cliente con los productos adquiridos, formalizando la orden de compra y su importe total.
 
 #### 🔄 Reverso (Dorso)
-
-| Responsabilidades | Colaboradores |
+| Responsabilidades | Colaboración |
 | :--- | :--- |
-| **Saber:**<br>- Colección de productos disponibles en catálogo.<br>- Colección de pedidos registrados en el sistema.<br><br>**Hacer:**<br>- Buscar y verificar la disponibilidad de stock de productos.<br>- Crear e instanciar listas temporales de presentación.<br>- Instanciar y persistir una nueva orden `Pedido`.<br>- Coordinar el decremento de inventario con las instancias de `Producto`. | - **ControladorPedido:** Quien le solicita las operaciones del caso de uso.<br>- **Producto:** A quien consulta stock y solicita decrementar unidades.<br>- **Pedido:** A quien instancia y agrega a la colección de pedidos.<br>- **PasarelaPagosAdapter:** Con quien coordina la aprobación del cobro electrónico. |
+| **Hacer:**<br>- Calcular el importe total sumando los subtotales de sus detalles.<br>- Confirmar la aprobación de la orden.<br>- Proveer su número identificador.<br><br>**Saber:**<br>- Número de pedido (`nroPedido`), fecha de creación (`fechaCreacion`), estado (`estado`), monto total (`montoTotal`) y dirección de entrega (`direccionEntrega`). | - **Cliente:** A quien pertenece el pedido.<br>- **DetallePedido:** A quien le solicita el subtotal de cada ítem.<br>- **Factura:** A quien provee información para emitir el comprobante.<br>- **Sistema:** Quien lo crea y lo administra. |
+
+---
+
+### Tarjeta 6: `DetallePedido` (Dominio)
+
+#### 📇 Anverso (Frente)
+* **Clase:** `DetallePedido`
+* **Propósito:** Registrar la línea de ítem de un pedido, congelando la cantidad solicitada y el precio unitario histórico de venta.
+
+#### 🔄 Reverso (Dorso)
+| Responsabilidades | Colaboración |
+| :--- | :--- |
+| **Hacer:**<br>- Calcular su subtotal multiplicando cantidad por precio unitario.<br>- Informar el producto referenciado.<br><br>**Saber:**<br>- Cantidad de unidades (`cantidad`) y precio unitario histórico (`precioUnitarioHistorico`). | - **Pedido:** Quien lo contiene en composición.<br>- **Producto:** A quien referencia para obtener el precio de catálogo al crearse. |
+
+---
+
+### Tarjeta 7: `Producto` (Dominio)
+
+#### 📇 Anverso (Frente)
+* **Clase:** `Producto`
+* **Propósito:** Entidad del catálogo que gestiona la información comercial del artículo, precio vigente y control de inventario.
+
+#### 🔄 Reverso (Dorso)
+| Responsabilidades | Colaboración |
+| :--- | :--- |
+| **Hacer:**<br>- Validar si cuenta con existencias suficientes (`tieneStockSuficiente(cantidad)`).<br>- Reducir el stock disponible al confirmarse la compra (`decrementarStock(cantidad)`).<br>- Proveer precio actual y existencias.<br><br>**Saber:**<br>- Identificador (`idProducto`), nombre (`nombre`), precio (`precioActual`) y existencias (`stockActual`). | - **Sistema:** Quien le consulta disponibilidad y ordena descontar existencias.<br>- **DetallePedido:** Quien toma su precio para la línea de pedido. |
+
+---
+
+### Tarjeta 8: `Cliente` (Dominio)
+
+#### 📇 Anverso (Frente)
+* **Clase:** `Cliente`
+* **Propósito:** Representar al comprador en el dominio del problema, manteniendo sus datos personales y domicilio.
+
+#### 🔄 Reverso (Dorso)
+| Responsabilidades | Colaboración |
+| :--- | :--- |
+| **Hacer:**<br>- Proveer sus datos de contacto y dirección de entrega.<br><br>**Saber:**<br>- Identificador (`idCliente`), nombre completo (`nombre`), correo (`email`) y dirección (`direccion`). | - **Pedido:** Quien mantiene la asociación con el cliente titular.<br>- **Sistema:** Quien lo vincula al pedido a partir de la sesión. |
+
+---
+
+### Tarjeta 9: `Factura` (Dominio)
+
+#### 📇 Anverso (Frente)
+* **Clase:** `Factura`
+* **Propósito:** Comprobante fiscal generado a partir de una orden de pedido confirmada.
+
+#### 🔄 Reverso (Dorso)
+| Responsabilidades | Colaboración |
+| :--- | :--- |
+| **Hacer:**<br>- Emitir el comprobante con los importes finales del pedido.<br><br>**Saber:**<br>- Número de comprobante (`nroComprobante`), fecha de emisión (`fechaEmision`) e importe total (`importeTotal`). | - **Pedido:** A partir de quien se obtienen los datos de facturación. |

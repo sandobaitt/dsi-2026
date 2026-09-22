@@ -6,48 +6,56 @@ skinparam classAttributeIconSize 0
 skinparam linetype ortho
 
 ' ==============================================================================
-' EJEMPLO: Diagrama de Clases - Módulo Gestión de Pedidos
-' Materia: Diseño de Sistemas (DSI)
-' Coherente con CU-03 Crear Pedido y Diagrama de Secuencia seq_crear_pedido
+' EJEMPLO: Diagrama de Clases - Realización de CU-03 Crear Pedido
+' Materia: Diseño de Sistemas (DSI 2026)
+' - Se incluyen ÚNICAMENTE las clases involucradas en el caso de uso.
+' - REGLA DE CÁTEDRA: UI y Controlador NO TIENEN ATRIBUTOS.
+' - Coherencia total: Todo mensaje de secuencia es método aquí.
 ' ==============================================================================
 
 package "Capa de Presentación y Control" {
+    
+    ' UI: Sin atributos
     class "PantallaCarrito" as UI <<Boundary>> {
-        + mostrarItemsCarrito(items: List): void
-        + solicitarDatosEntrega(): void
-        + mostrarConfirmacion(nroPedido: int): void
-        + mostrarError(mensaje: String): void
+        + mostrarDatosEntregaYPago(): void
+        + mostrarPantallaExito(idPedido: int): void
+        + mostrarMensajeError(mensaje: String): void
     }
 
+    ' Controlador del CU: Sin atributos
     class "ControladorPedido" as CTRLCU <<Control>> {
         + iniciarCreacionPedido(idCarrito: int): void
-        + confirmarPedido(datosPago: DatosPago, direccion: String): int
+        + confirmarPedido(datosTarjeta: String, direccion: String): void
     }
 
+    ' Controlador de Sesión: Sin atributos
     class "ControladorSesion" as CTRLSesion <<Control>> {
-        - usuarioLogueado: Usuario
-        + obtenerUsuarioLogueado(): Usuario
+        + obtenerUsuarioLogueado(): Cliente
         + obtenerLegajo(): String
     }
 
-    class "Sistema" as Sistema <<Fachada / Sistema>> {
-        + obtenerItemsCarrito(idCarrito: int): List<ItemDTO>
+    ' Sistema: Fachada de negocio. Conoce colecciones y busca.
+    class "Sistema" as Sistema <<Sistema>> {
+        + obtenerItemsCarrito(idCarrito: int): List
         + verificarStock(idProducto: int, cantidad: int): boolean
-        + registrarPedido(cliente: Cliente, items: List, total: double): int
+        + decrementarStock(idProducto: int, cantidad: int): void
+        + registrarPedido(cliente: Cliente, direccion: String): int
     }
 }
 
 package "Capa de Dominio" {
+    
     class "Cliente" as Cliente <<Entity>> {
         - idCliente: int
         - nombre: String
         - email: String
         - direccion: String
+        + getIdCliente(): int
         + getNombre(): String
         + getDireccion(): String
     }
 
-    ' Clase central de transacción que relaciona Cliente, Producto (vía Detalle) y Factura
+    ' Clase transaccional que relaciona Cliente, Producto (vía Detalle) y Factura
     class "Pedido" as Pedido <<Entity>> {
         - nroPedido: int
         - fechaCreacion: DateTime
@@ -65,14 +73,15 @@ package "Capa de Dominio" {
         - precioUnitarioHistorico: double
         + calcularSubtotal(): double
         + getCantidad(): int
+        + getPrecioUnitario(): double
     }
 
     class "Producto" as Producto <<Entity>> {
         - idProducto: int
         - nombre: String
-        - descripcion: String
         - precioActual: double
         - stockActual: int
+        + getIdProducto(): int
         + getPrecioActual(): double
         + getStockActual(): int
         + tieneStockSuficiente(cantidad: int): boolean
@@ -82,7 +91,6 @@ package "Capa de Dominio" {
     class "Factura" as Factura <<Entity>> {
         - nroComprobante: String
         - fechaEmision: DateTime
-        - cuit: String
         - importeTotal: double
         + emitir(): void
     }
@@ -92,26 +100,25 @@ package "Capa de Dominio" {
 ' RELACIONES
 ' ------------------------------------------------------------------------------
 
-' Flujo de Control
+' Flujo de control
 UI ..> CTRLCU : invoca
 CTRLCU --> CTRLSesion : consulta sesión
 CTRLCU --> Sistema : delega operaciones
 
-' Sistema administra las colecciones
+' Sistema conoce colecciones globales de entidades
 Sistema o-- "*" Pedido : pedidosRegistrados
 Sistema o-- "*" Producto : catalogoProductos
 
-' Relaciones del Modelo de Dominio
+' Relaciones estructurales del Dominio
 Cliente "1" -- "*" Pedido : realiza >
 Pedido "1" *-- "1..*" DetallePedido : contiene >
 DetallePedido "*" --> "1" Producto : referencia a >
 Pedido "1" -- "0..1" Factura : genera >
 
 note bottom of Pedido
-  **Clase Transaccional del Sistema:**
-  Relaciona directamente al Cliente,
-  a los Productos (mediante DetallePedido)
-  y a la Factura emitida.
+  **Clase Transaccional:**
+  Relaciona al Cliente con los
+  Productos (vía Detalle) y la Factura.
 end note
 
 @enduml

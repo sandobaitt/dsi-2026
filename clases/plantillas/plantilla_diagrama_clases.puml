@@ -6,79 +6,65 @@ skinparam classAttributeIconSize 0
 skinparam linetype ortho
 
 ' ==============================================================================
-' PLANTILLA: Diagrama de Clases (UML Estándar)
-' Materia: Diseño de Sistemas (DSI)
+' PLANTILLA: Diagrama de Clases (Realización del CU - Cátedra DSI 2026)
+' - Se grafican ÚNICAMENTE las clases involucradas en el caso de uso.
+' - REGLA DE ORO DE CÁTEDRA: Las clases UI y Controlador NO LLEVAN ATRIBUTOS.
+' - Las clases de dominio SÍ contienen atributos y métodos.
+' - Todo mensaje recibido en el Diagrama de Secuencia DEBE ser método aquí.
 ' ==============================================================================
 
-' ------------------------------------------------------------------------------
-' 1. CAPA DE INTERFAZ Y CONTROLADORES
-' ------------------------------------------------------------------------------
 package "Capa de Presentación y Control" {
+    
+    ' UI: Sin atributos. Responsable de interacción con el actor.
     class "PantallaOperacion" as UI <<Boundary>> {
         + mostrarDatos(lista: List): void
-        + solicitarConfirmacion(): void
-        + notificarError(mensaje: String): void
+        + solicitarDatos(): void
+        + mostrarConfirmacion(): void
+        + mostrarError(mensaje: String): void
     }
 
+    ' Controlador: Sin atributos. Coordina el flujo del CU.
     class "CTRLCasoDeUso" as CTRLCU <<Control>> {
-        - idSesion: int
         + iniciarOperacion(): void
         + procesarSeleccion(id: int): void
-        + confirmarOperacion(): boolean
+        + confirmarOperacion(): void
     }
 
+    ' Controlador de Sesión: Sin atributos. Provee credenciales del usuario activo.
     class "CTRLSesion" as CTRLSesion <<Control>> {
-        - usuarioActivo: Usuario
-        - tokenSesion: String
         + obtenerUsuarioLogueado(): Usuario
         + obtenerLegajo(): String
     }
 
-    class "Sistema" as Sistema <<Fachada / Sistema>> {
+    ' Sistema: Fachada global. Conoce colecciones, busca, da de alta y calcula.
+    class "Sistema" as Sistema <<Sistema>> {
         + obtenerEntidadesDisponibles(): List
-        + registrarNuevaTransaccion(datos: DTO): boolean
+        + verificarCondicion(): boolean
+        + registrarTransaccion(): void
     }
 }
 
-' ------------------------------------------------------------------------------
-' 2. CAPA DE DOMINIO (ENTIDADES Y RELACIONES)
-' ------------------------------------------------------------------------------
 package "Capa de Dominio" {
     
-    abstract class "Persona" as Persona <<Entity>> {
-        # nombre: String
-        # apellido: String
-        # dni: String
-        + getNombreCompleto(): String
-    }
-
-    class "RolUsuario" as Rol <<Entity>> {
-        - nombreRol: String
-        - permisos: List<String>
-        + tienePermiso(permiso: String): boolean
-    }
-
-    class "EntidadPrincipal" as EntidadA <<Entity>> {
-        - codigo: String
-        - descripcion: String
-        - estado: String
-        + getCodigo(): String
-        + estaHabilitado(): boolean
-    }
-
-    class "EntidadSecundaria" as EntidadB <<Entity>> {
+    class "EntidadA" as EntidadA <<Entity>> {
         - id: int
-        - montoUnitario: double
-        + getMontoUnitario(): double
+        - estado: String
+        + getId(): int
+        + estaActivo(): boolean
     }
 
-    ' Clase asociativa / transacción que vincula a las entidades del sistema
+    class "EntidadB" as EntidadB <<Entity>> {
+        - codigo: String
+        - importe: double
+        + getImporte(): double
+    }
+
+    ' Clase asociativa / transacción que relaciona a las entidades del dominio
     class "Transaccion" as Transaccion <<Entity>> {
         - nroTransaccion: int
-        - fechaHora: DateTime
+        - fecha: Date
         - montoTotal: double
-        - estado: String
-        + calcularMontoTotal(): double
+        + calcularTotal(): double
         + confirmar(): void
     }
 
@@ -90,30 +76,21 @@ package "Capa de Dominio" {
 }
 
 ' ------------------------------------------------------------------------------
-' 3. RELACIONES ENTRE CLASES
+' RELACIONES
 ' ------------------------------------------------------------------------------
 
-' Dependencias de Control
-UI ..> CTRLCU : invoca eventos >
-CTRLCU --> CTRLSesion : consulta sesión >
-CTRLCU --> Sistema : delega operaciones >
+' Flujo de Control y Dependencias
+UI ..> CTRLCU : invoca
+CTRLCU --> CTRLSesion : consulta sesión
+CTRLCU --> Sistema : delega operaciones
 
-' Conexión del Sistema con el Dominio
-Sistema o-- "*" Transaccion : administra colección
-Sistema o-- "*" EntidadA : busca instancias
+' Sistema administra colecciones
+Sistema o-- "*" Transaccion : administra
+Sistema o-- "*" EntidadA : busca en
 
-' Herencia / Generalización
-Persona <|-- Rol
-
-' Asociaciones y Composiciones
+' Relaciones estructurales del Dominio
 EntidadA "1" -- "*" Transaccion : participa en >
 Transaccion "1" *-- "1..*" Detalle : compuesta por >
 Detalle "*" --> "1" EntidadB : referencia a >
-
-note right of Transaccion
-  Clase asociativa o transacción
-  que relaciona y resuelve las
-  entidades clave del dominio.
-end note
 
 @enduml

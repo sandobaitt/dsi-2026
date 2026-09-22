@@ -6,58 +6,50 @@ skinparam roundcorner 10
 skinparam actorStyle awesome
 
 ' ==============================================================================
-' PLANTILLA: Diagrama de Casos de Uso (UML Estándar)
-' Materia: Diseño de Sistemas (DSI)
+' PLANTILLA: Diagrama de Casos de Uso (UML - Cátedra DSI 2026)
 ' ==============================================================================
 
 ' ------------------------------------------------------------------------------
-' 1. DEFINICIÓN DE ACTORES
+' 1. ACTORES
+' - Lado izquierdo: Actores que inician el caso de uso (roles, nunca nombres propios).
+' - Lado derecho: Sistemas externos de soporte o receptores de información.
 ' ------------------------------------------------------------------------------
-' Actores Primarios (Inician la interacción con el sistema)
-actor "Usuario" as ActPrimario
-actor "Administrador" as ActAdmin
+actor "RolUsuario" as ActPrimario
+actor "RolAdministrador" as ActAdmin
+actor "SistemaExterno" as ActSecundario <<Sistema Externo>>
 
-' Actores Secundarios / Externos (Sistemas externos, pasarelas de pago, etc.)
-actor "Servicio Externo" as ActSecundario <<Sistema>>
-
-' Generalización de actores (si aplica)
+' Generalización / Herencia entre actores (si aplica)
 ActAdmin --|> ActPrimario
 
 ' ------------------------------------------------------------------------------
-' 2. LÍMITE DEL SISTEMA Y CASOS DE USO
+' 2. LÍMITE DEL SISTEMA (System Boundary)
+' - Los casos de uso van adentro; los actores van siempre afuera.
+' - Nomenclatura del CU: [Verbo en infinitivo] + [Sustantivo]
 ' ------------------------------------------------------------------------------
-rectangle "Nombre del Sistema / Módulo" {
+rectangle "Nombre del Sistema" {
     
-    ' Casos de uso principales (Verbo en infinitivo + Objeto)
-    usecase "CU01: Realizar Operación Principal" as CU01
-    usecase "CU02: Subfunción Compartida" as CU02
-    usecase "CU03: Flujo Opcional / Especial" as CU03
-    usecase "CU04: Operación Administrativa" as CU04
+    usecase "Registrar Operacion" as CU01
+    usecase "Validar Requisito Comun" as CU02
+    usecase "Gestionar Opcion Adicional" as CU03
+    usecase "Administrar Configuracion" as CU04
 
     ' --------------------------------------------------------------------------
     ' 3. RELACIONES ENTRE CASOS DE USO
+    ' - <<include>> : Parte obligatoria reutilizada. Flecha hacia el CU incluido.
+    ' - <<extend>>  : Comportamiento opcional. Flecha hacia el CU base.
     ' --------------------------------------------------------------------------
-    ' <<include>> : El CU base SIEMPRE ejecuta el CU incluido (flecha hacia el incluido)
     CU01 ..> CU02 : <<include>>
-
-    ' <<extend>> : El CU extensión agrega comportamiento opcional (flecha hacia el caso base)
     CU03 ..> CU01 : <<extend>>
 }
 
 ' ------------------------------------------------------------------------------
 ' 4. ASOCIACIONES ACTOR - CASO DE USO
+' - Regla de oro de cátedra: Línea sólida simple (--). ¡NO LLEVA FLECHAS!
 ' ------------------------------------------------------------------------------
-ActPrimario --> CU01
-ActAdmin --> CU04
+ActPrimario -- CU01
+ActAdmin -- CU04
 
-' Interacción con actor secundario
-CU01 --> ActSecundario
-
-' Notas explicativas (opcional)
-note right of CU03
-  Punto de Extensión:
-  Al fallar la validación o
-  solicitar método alternativo.
-end note
+' Interacción con actor secundario (soporte / externo)
+CU01 -- ActSecundario
 
 @enduml

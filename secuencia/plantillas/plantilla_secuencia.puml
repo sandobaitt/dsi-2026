@@ -8,61 +8,89 @@ skinparam sequenceMessageAlign center
 skinparam responseMessageBelowArrow true
 
 ' ==============================================================================
-' PLANTILLA: Diagrama de Secuencia (UML Estándar)
-' Materia: Diseño de Sistemas (DSI)
+' PLANTILLA: Diagrama de Secuencia (Cátedra DSI 2026)
+' - Orden: Actor -> UI -> CTRLCU -> CTRLSesion -> Sistema -> Dominio -> Actor Externo
+' - Servicios externos tratados directamente como ACTORES EXTERNOS
+' - CTRLSesion preexistente para credenciales (sin pedir datos conocidos al actor)
+' - Creación de listas temporales exclusiva por Sistema, sin destroy, sin return
 ' ==============================================================================
 
 ' ------------------------------------------------------------------------------
-' 1. PARTICIPANTES Y ROLES (Arquitectura en Capas / ECB: Entity-Control-Boundary)
+' 1. PARTICIPANTES Y ROLES
 ' ------------------------------------------------------------------------------
-actor "Usuario" as User
-boundary "PantallaPrincipal" as UI <<Boundary>>
-control "GestorOperacion" as Ctrl <<Control>>
-entity "EntidadNegocio" as Ent <<Entity>>
-database "BaseDeDatos" as DB <<Repository>>
+actor "Usuario" as Actor
+boundary "PantallaOperacion" as UI <<Boundary>>
+control "CTRLCasoDeUso" as CTRLCU <<Control>>
+control "CTRLSesion" as CTRLSesion <<Control>>
+participant "Sistema" as Sistema <<Sistema>>
+collections "EntidadColeccion" as Entidades <<Entity>>
+entity "listaTemp" as TempList <<Lista Temporal>>
+actor "ServicioExterno" as ActorExt <<Actor Externo>>
 
 ' ------------------------------------------------------------------------------
 ' 2. MENSAJES Y FLUJO DE EVENTOS
 ' ------------------------------------------------------------------------------
-User -> UI: 1. Iniciar acción(datosEntrada)
+Actor -> UI: 1. solicitarAccion()
 activate UI
 
-UI -> Ctrl: 2. procesarSolicitud(datosEntrada)
-activate Ctrl
+UI -> CTRLCU: 2. iniciarOperacion()
+activate CTRLCU
 
-Ctrl -> Ent: 3. validarReglasNegocio()
-activate Ent
-Ent --> Ctrl: 4. resultadoValidacion(ok)
-deactivate Ent
+' Consulta de sesión (preexistente)
+CTRLCU -> CTRLSesion: 3. obtenerUsuarioLogueado()
+activate CTRLSesion
+CTRLSesion --> CTRLCU: 4. usuarioActivo
+deactivate CTRLSesion
 
-' Fragmento condicional (Alternativas: Éxito vs Error)
-alt Validación Exitosa
-    Ctrl -> DB: 5. guardarRegistro(datos)
-    activate DB
-    DB --> Ctrl: 6. confirmacionGuardado()
-    deactivate DB
+' Mensaje a Sistema: usa verbos de negocio como obtener...()
+CTRLCU -> Sistema: 5. obtenerDatosRequeridos()
+activate Sistema
 
-    Ctrl --> UI: 7. respuestaExitosa(idOperacion)
-    UI --> User: 8. Mostrar mensaje de confirmación
-else Validación Fallida
-    Ctrl --> UI: 7a. notificarError(motivo)
-    UI --> User: 8a. Mostrar alerta de error
+' Creación de lista temporal por Sistema
+create TempList
+Sistema -> TempList: 6. create()
+
+loop para cada entidad en Entidades
+    ' Mensaje a Entidad: usa getters get...()
+    Sistema -> Entidades: 7. getAtributo()
+    activate Entidades
+    Entidades --> Sistema: 8. valor
+    deactivate Entidades
+
+    Sistema -> TempList: 9. add(valor)
 end
 
-' Fragmento condicional opcional
-opt Usuario solicita comprobante digital
-    User -> UI: solicitarComprobante()
-    UI -> Ctrl: generarComprobantePDF()
-    Ctrl --> UI: archivoPDF
-    UI --> User: Descargar archivo
+' Retorno hacia el controlador (sin palabra return, sin retorno desde lista)
+Sistema --> CTRLCU: 10. listaTemp
+deactivate Sistema
+
+CTRLCU --> UI: 11. solicitarConfirmacion(listaTemp)
+deactivate CTRLCU
+
+Actor -> UI: 12. ingresarDatosYConfirmar()
+UI -> CTRLCU: 13. confirmarOperacion()
+activate CTRLCU
+
+' Regla de Cátedra: Comunicación con servicio externo hacia ACTOR EXTERNO
+CTRLCU -> ActorExt: 14. validarConTercero(datos)
+activate ActorExt
+ActorExt --> CTRLCU: 15. resultadoValidacion (ok)
+deactivate ActorExt
+
+alt Resultado Exitoso
+    CTRLCU -> Sistema: 16. registrarOperacion()
+    activate Sistema
+    Sistema --> CTRLCU: 17. confirmacion
+    deactivate Sistema
+
+    CTRLCU --> UI: 18. mostrarConfirmacion()
+    UI --> Actor: 19. Despliega comprobante exitoso
+else Resultado Rechazado
+    CTRLCU --> UI: 18a. mostrarError(motivo)
+    UI --> Actor: 19a. Informa el motivo del rechazo
 end
 
-' Fragmento de repetición (Bucle)
-loop Para cada ítem en el detalle
-    Ctrl -> Ent: calcularSubtotal(item)
-end
-
-deactivate Ctrl
+deactivate CTRLCU
 deactivate UI
 
 @enduml

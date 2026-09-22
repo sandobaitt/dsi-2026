@@ -43,6 +43,10 @@ Esta skill define las reglas obligatorias, criterios de corrección y convencion
 - En el diagrama de clases debe existir una clase que **relacione a las clases del sistema** involucradas en el caso de uso (clase asociativa, transacción o entidad centralizadora de negocio).
 - Todos los métodos invocados en el diagrama de secuencia deben figurar con la misma firma en las clases correspondientes.
 
+### 6. Servicios Externos como Actores Externos
+- **Tratamiento como Actor:** Cuando el sistema interactúa con un servicio o entidad externa (ej. *Entidad Bancaria* para validar pago, *AFIP* para facturación electrónica, *Proveedor de Envíos*), se modela como un **`actor` (Actor Externo)**, ubicado hacia el lado derecho del diagrama, y **no** como una clase o adaptador interno.
+- **Interacción:** El objeto que coordina (ej. `CTRLCU`) le envía el mensaje directamente al actor externo (ej: `CTRLCU -> Banco: validarPago(...)`) y el actor externo responde con la línea discontinua de retorno (`Banco --> CTRLCU: pagoAprobado`).
+
 ---
 
 ## 🏗️ Estructura Típica de Participantes (Izquierda a Derecha)

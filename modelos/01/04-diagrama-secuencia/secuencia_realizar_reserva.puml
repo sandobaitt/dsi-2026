@@ -1,0 +1,97 @@
+@startuml secuencia_realizar_reserva
+!pragma layout smetana
+autonumber "<b>[00]</b>"
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam sequenceArrowThickness 1.5
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+
+' ==============================================================================
+' DIAGRAMA DE SECUENCIA: Realización de CU "Realizar Reserva" (Reserva Paga)
+' Aplicación: Artify - Materia: Diseño de Sistemas (DSI 2026)
+' - CTRLSesion preexistente (sin ingreso manual de datos conocidos)
+' - Entidad externa bancaria tratada como ACTOR EXTERNO
+' - Nomenclatura rigurosa y retornos sin palabra "return"
+' - Coherencia total con los métodos del Diagrama de Clases
+' ==============================================================================
+
+' 1. Participantes ordenados de izquierda a derecha
+actor "Usuario" as Actor
+boundary "PantallaReserva" as UI <<Boundary>>
+control "CTRLRealizarReserva" as CTRL <<Control>>
+control "CTRLSesion" as CTRLSesion <<Control>>
+participant "Sistema" as Sistema <<Sistema>>
+collections "Evento" as Eventos <<Entity>>
+entity "nuevaReserva" as Reserva <<Entity>>
+actor "Entidad Bancaria" as Banco <<Actor Externo>>
+
+' ------------------------------------------------------------------------------
+' FLUJO PRINCIPAL (CAMINO ESTÁNDAR)
+' ------------------------------------------------------------------------------
+
+' Paso 1: Actor solicita realizar la reserva del evento
+Actor -> UI: 1. solicitarReserva(idEvento, cantidadEntradas)
+activate UI
+
+UI -> CTRL: 2. iniciarReserva(idEvento, cantidadEntradas)
+activate CTRL
+
+' Regla Cátedra: CTRLSesion preexistente provee credenciales del usuario activo
+CTRL -> CTRLSesion: 3. obtenerUsuarioLogueado()
+activate CTRLSesion
+CTRLSesion --> CTRL: 4. usuarioActivo
+deactivate CTRLSesion
+
+' Mensaje a Sistema: coordinación de validación de negocio
+CTRL -> Sistema: 5. verificarDisponibilidad(idEvento, cantidadEntradas)
+activate Sistema
+
+Sistema -> Eventos: 6. tieneDisponibilidad(cantidadEntradas)
+activate Eventos
+Eventos --> Sistema: 7. disponible (true)
+deactivate Eventos
+
+Sistema -> Sistema: 8. calcularMontoTotal(idEvento, cantidadEntradas)
+
+' Retorno con línea discontinua sin la palabra return
+Sistema --> CTRL: 9. montoTotal
+deactivate Sistema
+
+CTRL --> UI: 10. mostrarFormularioPago(montoTotal)
+deactivate CTRL
+
+' Paso 2: Actor selecciona medio de pago e ingresa datos
+Actor -> UI: 11. ingresarDatosPagoYConfirmar(datosPago)
+UI -> CTRL: 12. confirmarPagoReserva(datosPago)
+activate CTRL
+
+' Regla Cátedra: Comunicación con servicio externo hacia ACTOR EXTERNO
+CTRL -> Banco: 13. validarPago(datosPago, montoTotal)
+activate Banco
+Banco --> CTRL: 14. pagoAprobado (true)
+deactivate Banco
+
+' Paso 3: Persistencia y actualización del sistema
+CTRL -> Sistema: 15. registrarReserva(usuarioActivo, idEvento, cantidadEntradas)
+activate Sistema
+
+create Reserva
+Sistema -> Reserva: 16. create(usuarioActivo, idEvento, montoTotal)
+
+Sistema -> Eventos: 17. decrementarCupo(cantidadEntradas)
+activate Eventos
+Eventos --> Sistema: 18. cupoActualizado
+deactivate Eventos
+
+' Retorno del número de reserva confirmado
+Sistema --> CTRL: 19. nroReserva
+deactivate Sistema
+
+CTRL --> UI: 20. mostrarReservaConfirmada(nroReserva)
+deactivate CTRL
+
+UI --> Actor: 21. Despliega confirmación de reserva y añade evento al calendario
+deactivate UI
+
+@enduml

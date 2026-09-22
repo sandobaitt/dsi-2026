@@ -1,107 +1,92 @@
 # DSI 2026 - Diseño de Sistemas (UML, CRC y Casos de Uso)
 
-Repositorio integral de trabajo para la materia **Diseño de Sistemas (2026)**.
-Contiene plantillas formales, ejemplos resueltos interconectados y automatización de renderizado vectorial **SVG** mediante **PlantUML** y scripts Bash.
+Repositorio integral de trabajo y preparación para el parcial de **Diseño de Sistemas (2026)**, estructurado con base en las directrices de cátedra del **[Apunte Parcial Práctico 2026](file:///home/sando/Documents/dsi-2026/apunte.md)**.
 
 ---
 
-## 🚀 Inicio Rápido: Renderizado a SVG
+## 🎯 Metodología de Resolución de Examen
 
-El script [`render.sh`](file:///home/sando/Documents/dsi-2026/render.sh) compila de forma automática cualquier diagrama `.puml` a formato vectorial `.svg` (o PNG si se prefiere).
+Siguiendo el orden oficial de resolución establecido por la cátedra:
 
-```bash
-# 1. Compilar TODOS los diagramas del proyecto a SVG (casos de uso, secuencia, clases)
-./render.sh
-
-# 2. Compilar un diagrama puntual
-./render.sh clases/ejemplos/clases_gestion_pedidos.puml
-
-# 3. Compilar todos los diagramas de una carpeta específica
-./render.sh clases/
-
-# 4. Modo Observador (Watch Mode): Re-compila automáticamente al guardar cambios
-./render.sh -w
-
-# 5. Exportar a formato PNG en lugar de SVG
-./render.sh -f png secuencia/ejemplos/seq_crear_pedido.puml
+```text
+1. Diagrama de Casos de Uso (Delimitación del sistema y actores)
+   ↓
+2. Descripción de Caso de Uso (Especificación textual paso a paso del CU)
+   ↓
+3. Realización del Caso de Uso (Para el CU seleccionado exclusivamente):
+   ├── 3.1. Diagrama de Clases (Únicamente clases del CU; UI y CTRL sin atributos)
+   ├── 3.2. Tarjetas CRC (Anverso/Reverso para cada clase del diagrama)
+   └── 3.3. Diagrama de Secuencia (Flujo temporal con CTRLSesion y pautas de cátedra)
 ```
 
-> **Visualización rápida:** En Linux / Pop!_OS puedes abrir cualquier SVG en tu visor preferido o navegador:
-> ```bash
-> xdg-open clases/ejemplos/clases_gestion_pedidos.svg
-> ```
+---
+
+## 🚀 Compilación y Renderizado a SVG
+
+El script [`render.sh`](file:///home/sando/Documents/dsi-2026/render.sh) compila de forma automática cualquier diagrama `.puml` a formato vectorial `.svg`:
+
+```bash
+# Compilar TODOS los diagramas del proyecto a SVG
+./render.sh
+
+# Compilar una carpeta específica
+./render.sh casos-de-uso/
+./render.sh clases/
+./render.sh secuencia/
+
+# Compilar un archivo puntual
+./render.sh clases/ejemplos/clases_gestion_pedidos.puml
+
+# Modo Observador (Watch Mode en tiempo real)
+./render.sh -w
+```
 
 ---
 
-## 📂 Estructura Completa del Proyecto
-
-El repositorio está organizado en 5 áreas clave del diseño orientado a objetos:
+## 📂 Organización de Carpetas y Artefactos
 
 ```text
 dsi-2026/
-├── bin/
-│   └── plantuml                             # Wrapper CLI ejecutable de PlantUML (motor Smetana)
-├── render.sh                                # Script Bash principal para compilar diagramas a SVG
+├── apunte.md                                # Apunte oficial de cátedra (Mateo Lopez, Agustin Carrasco, Lautaro Sandoval)
+├── bin/plantuml                             # Wrapper CLI ejecutable de PlantUML con motor Smetana
+├── render.sh                                # Script de automatización Bash para generar SVG
 │
 ├── casos-de-uso/                            # 1. DIAGRAMAS DE CASOS DE USO
-│   ├── plantillas/
-│   │   └── plantilla_caso_uso.puml          # Plantilla UML (Actores, límites, <<include>>, <<extend>>)
-│   └── ejemplos/
-│       ├── cu_gestion_pedidos.puml          # Diagrama resuelto del módulo de pedidos
-│       └── cu_gestion_pedidos.svg           # Gráfico SVG vectorial compilado
+│   ├── plantillas/plantilla_caso_uso.puml   # Plantilla (asociaciones sin flechas, límites del sistema)
+│   └── ejemplos/cu_gestion_pedidos.puml     # Ejemplo resuelto (include, extend, herencia)
 │
-├── descripcion-casos-de-uso/                # 2. DESCRIPCIÓN Y ESPECIFICACIÓN DE CU
-│   ├── plantillas/
-│   │   └── plantilla_descripcion_cu.md      # Plantilla académica (Pre/Post, Camino feliz, Alternativas)
-│   └── ejemplos/
-│       └── descripcion_cu_crear_pedido.md   # Especificación formal paso a paso del CU-03
+├── descripcion-casos-de-uso/                # 2. DESCRIPCIÓN TEXTUAL DE CASOS DE USO
+│   ├── plantillas/plantilla_descripcion_cu.md # Plantilla (pre/post al sistema, alternancia 1 a 1, sin UI)
+│   └── ejemplos/descripcion_cu_crear_pedido.md # Ejemplo del CU-03 (caminos alternativos 2.a, 5.a, 5.b)
 │
-├── tarjetas-crc/                            # 3. TARJETAS CRC (Clase - Responsabilidad - Colaborador)
-│   ├── plantillas/
-│   │   └── plantilla_tarjeta_crc.md         # Plantilla con formato Anverso (Frente) / Reverso (Dorso)
-│   └── ejemplos/
-│       └── crc_gestion_pedidos.md           # Tarjetas CRC de Pedido, Detalle, Producto, Cliente, etc.
+├── clases/                                  # 3.1. DIAGRAMAS DE CLASES DE LA REALIZACIÓN
+│   ├── plantillas/plantilla_diagrama_clases.puml # Plantilla (UI y CTRL SIN atributos; clases transaccionales)
+│   └── ejemplos/clases_gestion_pedidos.puml # Modelo de clases coherente con secuencia y CRC
 │
-├── secuencia/                               # 4. DIAGRAMAS DE SECUENCIA
-│   ├── plantillas/
-│   │   └── plantilla_secuencia.puml         # Plantilla con ECB, CTRLSesion, autonumber y fragmentos
-│   └── ejemplos/
-│       ├── seq_crear_pedido.puml            # Realización técnica del CU-03
-│       └── seq_crear_pedido.svg             # Gráfico SVG vectorial compilado
+├── tarjetas-crc/                            # 3.2. TARJETAS CRC
+│   ├── plantillas/plantilla_tarjeta_crc.md  # Plantilla formal: Anverso (Frente) / Reverso (Dorso)
+│   └── ejemplos/crc_gestion_pedidos.md      # Tarjetas de las 9 clases involucradas en el CU-03
 │
-├── clases/                                  # 5. DIAGRAMAS DE CLASES
-│   ├── plantillas/
-│   │   └── plantilla_diagrama_clases.puml   # Plantilla UML (Entidades, Control, Límites, asociativas)
-│   └── ejemplos/
-│       ├── clases_gestion_pedidos.puml      # Modelo de clases del dominio y control
-│       └── clases_gestion_pedidos.svg       # Gráfico SVG vectorial compilado
+├── secuencia/                               # 3.3. DIAGRAMAS DE SECUENCIA
+│   ├── plantillas/plantilla_secuencia.puml  # Plantilla (autonumber, fragmentos, activaciones)
+│   └── ejemplos/seq_crear_pedido.puml       # Realización temporal (CTRLSesion, obtener vs get, sin return)
 │
-├── .agents/skills/dsi-secuencia/            # Skill de cátedra de DSI para el asistente
-│   ├── SKILL.md                             # Reglas de oro y criterios de parcial
-│   ├── references/pautas_catedra.md         # Fundamentos teóricos y consultas docentes
-│   └── examples/ejemplo_secuencia_catedra.puml # Ejemplo que aplica las pautas de cátedra
-└── README.md
+└── .agents/skills/                          # SKILLS PERSONALIZADAS PARA CADA ARTEFACTO
+    ├── dsi-casos-de-uso/SKILL.md            # Reglas para DCU (asociaciones sin flechas, roles, include/extend)
+    ├── dsi-descripcion-cu/SKILL.md          # Reglas para descripción (lenguaje generalista, no repetir precondición)
+    ├── dsi-clases/SKILL.md                  # Reglas para clases (UI y CTRL sin atributos, correspondencia con métodos)
+    ├── dsi-tarjetas-crc/SKILL.md            # Reglas para CRC (formato Frente/Dorso, coherencia 1 a 1 con clases)
+    └── dsi-secuencia/SKILL.md               # Reglas para secuencia (CTRLSesion, listas temporales por Sistema)
 ```
 
 ---
 
-## 📇 Formato de Tarjetas CRC
+## 📐 Coherencia Total del Problema de Ejemplo
 
-Cada tarjeta CRC sigue estrictamente la convención pedagógica de doble faz:
+El ejemplo transversal del repositorio modela la **Gestión y Creación de Pedidos (CU-03)** en todos los modelos:
 
-- **Anverso (Frente):**
-  - **Nombre de la clase:** Identificador único de la clase.
-  - **Propósito:** Descripción breve y clara del rol que cumple dentro del dominio del problema.
-- **Reverso (Dorso):**
-  - **Responsabilidades:** Qué tareas sabe realizar (*Hacer*) y qué información conoce (*Saber*).
-  - **Colaboradores:** Otras clases con las que interactúa para cumplir sus tareas (quién le pide servicios o a quién ella debe pedir servicios).
-
-Ver [`tarjetas-crc/plantillas/plantilla_tarjeta_crc.md`](file:///home/sando/Documents/dsi-2026/tarjetas-crc/plantillas/plantilla_tarjeta_crc.md) y [`tarjetas-crc/ejemplos/crc_gestion_pedidos.md`](file:///home/sando/Documents/dsi-2026/tarjetas-crc/ejemplos/crc_gestion_pedidos.md).
-
----
-
-## 📐 Coherencia Trazable entre Modelos
-
-Todos los ejemplos incluidos corresponden al mismo problema (**Gestión de Pedidos de Comercio Electrónico**), demostrando la trazabilidad completa requerida en Diseño de Sistemas:
-
-$$\text{Diagrama CU} \longleftrightarrow \text{Descripción CU} \longleftrightarrow \text{Tarjetas CRC} \longleftrightarrow \text{Diagrama de Secuencia} \longleftrightarrow \text{Diagrama de Clases}$$
+1. **Diagrama de CU:** `Cliente -- CU_CrearPedido ..> CU_ProcesarPago : <<include>>`.
+2. **Descripción de CU:** Paso a paso alternado Actor-Sistema, sin mencionar botones ni tecnologías.
+3. **Diagrama de Clases:** `UI` y `ControladorPedido` sin atributos; `Pedido` como clase transaccional que relaciona `Cliente`, `Producto` y `Factura`.
+4. **Tarjetas CRC:** 9 tarjetas con Anverso (Clase, Propósito) y Reverso (Responsabilidades: Hacer/Saber, Colaboración).
+5. **Diagrama de Secuencia:** `ControladorPedido` consulta credenciales a `CTRLSesion` preexistente; `Sistema` crea la lista temporal y decrementa stock; sin `destroy` y sin la palabra `return`.

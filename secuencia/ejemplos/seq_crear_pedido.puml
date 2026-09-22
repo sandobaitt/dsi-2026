@@ -9,78 +9,111 @@ skinparam responseMessageBelowArrow true
 
 ' ==============================================================================
 ' REALIZACIÓN DEL CASO DE USO: CU-03 Crear Pedido
-' Materia: Diseño de Sistemas (DSI)
+' Materia: Diseño de Sistemas (DSI 2026)
+' - Servicios externos tratados como ACTORES EXTERNOS (ej. Entidad Bancaria)
+' - CTRLSesion preexistente (sin pedir datos conocidos al usuario)
+' - Listas temporales creadas por Sistema, sin destroy y sin palabra return
 ' ==============================================================================
 
-actor "Cliente" as Cliente
-boundary "PantallaCarrito" as View <<Boundary>>
-control "ControladorPedido" as Gestor <<Control>>
-entity "Carrito" as Cart <<Entity>>
-entity "Pedido" as Order <<Entity>>
-entity "Inventario" as Stock <<Entity>>
-participant "PasarelaPagosAdapter" as Gateway <<Boundary / Adapter>>
-database "BaseDeDatos" as DB <<Repository>>
+' 1. Participantes ordenados de izquierda a derecha
+actor "Cliente" as Actor
+boundary "PantallaCarrito" as UI <<Boundary>>
+control "ControladorPedido" as CTRLCU <<Control>>
+control "ControladorSesion" as CTRLSesion <<Control>>
+participant "Sistema" as Sistema <<Sistema>>
+collections "Carrito" as Cart <<Coleccion / Entity>>
+collections "Producto" as Productos <<Entity>>
+entity "listaItemsTemp" as ListaTemp <<Lista Temporal>>
+actor "Entidad Bancaria" as Banco <<Actor Externo>>
+entity "nuevoPedido" as Pedido <<Entity>>
 
-' Flujo Principal
-Cliente -> View: click "Finalizar Compra"
-activate View
+' ------------------------------------------------------------------------------
+' FLUJO TEMPORAL DEL CASO DE USO
+' ------------------------------------------------------------------------------
 
-View -> Gestor: iniciarCreacionPedido(idCarrito)
-activate Gestor
+' Paso 1: Actor solicita finalizar la compra
+Actor -> UI: 1. click "Finalizar Compra"
+activate UI
 
-Gestor -> Cart: obtenerItems()
+UI -> CTRLCU: 2. iniciarCreacionPedido(idCarrito)
+activate CTRLCU
+
+' Regla Cátedra: CTRLCU extrae usuario de CTRLSesion preexistente
+CTRLCU -> CTRLSesion: 3. obtenerUsuarioLogueado()
+activate CTRLSesion
+CTRLSesion --> CTRLCU: 4. clienteActivo
+deactivate CTRLSesion
+
+' Regla Cátedra: De CTRL a Sistema se usa "obtener...()" (NO "get")
+CTRLCU -> Sistema: 5. obtenerItemsCarrito(idCarrito)
+activate Sistema
+
+' Regla Cátedra: Sistema crea e instancia la lista temporal
+create ListaTemp
+Sistema -> ListaTemp: 6. create()
+
+Sistema -> Cart: 7. getItems()
 activate Cart
-Cart --> Gestor: listaItems
+Cart --> Sistema: 8. items
 deactivate Cart
 
-' Bucle para verificar stock
-loop para cada item en listaItems
-    Gestor -> Stock: verificarStock(item.productoId, item.cantidad)
-    activate Stock
-    Stock --> Gestor: stockDisponible (bool)
-    deactivate Stock
+' Validación de stock
+loop para cada item en items
+    ' Regla Cátedra: De Sistema a Entidad se usa "get...()" o métodos de dominio
+    Sistema -> Productos: 9. tieneStockSuficiente(item.cantidad)
+    activate Productos
+    Productos --> Sistema: 10. stockDisponible
+    deactivate Productos
+
+    Sistema -> ListaTemp: 11. add(item)
 end
 
-Gestor --> View: solicitarDatosPagoYEnvio()
-deactivate Gestor
+' Regla Cátedra: SIN retorno desde ListaTemp hacia Sistema
+' Regla Cátedra: Retorno con línea punteada sin la palabra "return"
+Sistema --> CTRLCU: 12. listaItemsTemp
+deactivate Sistema
 
-Cliente -> View: ingresarDatos(direccion, datosTarjeta)
-View -> Gestor: confirmarPedido(datosTarjeta, direccion)
-activate Gestor
+CTRLCU --> UI: 13. mostrarDatosEntregaYPago()
+deactivate CTRLCU
 
-' Llamada al servicio externo de pago
-Gestor -> Gateway: procesarPago(datosTarjeta, montoTotal)
-activate Gateway
-Gateway --> Gestor: resultadoPago (APROBADO)
-deactivate Gateway
+' Paso 2: Actor ingresa datos y confirma
+Actor -> UI: 14. ingresarDatos(direccion, datosTarjeta)
+UI -> CTRLCU: 15. confirmarPedido(datosTarjeta, direccion)
+activate CTRLCU
+
+' Regla Cátedra: El servicio externo se trata como ACTOR EXTERNO
+CTRLCU -> Banco: 16. validarPago(datosTarjeta, montoTotal)
+activate Banco
+Banco --> CTRLCU: 17. pagoAprobado (true)
+deactivate Banco
 
 alt Pago Aprobado
-    Gestor -> Order: new Pedido(items, total, direccion, "APROBADO")
-    activate Order
-    Order --> Gestor: pedidoCreado
-    deactivate Order
+    ' Regla Cátedra: Sistema registra el pedido y administra persistencia
+    CTRLCU -> Sistema: 18. registrarPedido(clienteActivo, direccion)
+    activate Sistema
 
-    Gestor -> DB: guardar(pedidoCreado)
-    activate DB
-    DB --> Gestor: idPedidoGenerado
-    deactivate DB
+    create Pedido
+    Sistema -> Pedido: 19. create(clienteActivo, direccion)
 
-    ' Descuento de stock
-    loop para cada item en listaItems
-        Gestor -> Stock: decrementarStock(item.productoId, item.cantidad)
-        activate Stock
-        Stock --> Gestor: confirmacion
-        deactivate Stock
+    loop para cada item en listaItemsTemp
+        Sistema -> Productos: 20. decrementarStock(item.idProducto, item.cantidad)
+        activate Productos
+        Productos --> Sistema: 21. confirmacion
+        deactivate Productos
     end
 
-    Gestor --> View: pedidoExitoso(idPedidoGenerado)
-    View --> Cliente: mostrarPantallaExito(idPedidoGenerado)
+    ' Regla Cátedra: SIN destroy para lista temporal (no resta puntos en parcial)
+    Sistema --> CTRLCU: 22. idPedidoConfirmado
+    deactivate Sistema
+
+    CTRLCU --> UI: 23. mostrarPantallaExito(idPedidoConfirmado)
+    UI --> Actor: 24. Despliega confirmación de compra y comprobante
 else Pago Rechazado
-    Gestor --> View: notificarRechazo(motivo)
-    View --> Cliente: mostrarMensajeError("Tarjeta rechazada por la entidad bancaria")
+    CTRLCU --> UI: 23a. mostrarMensajeError("Pago rechazado por la entidad bancaria")
+    UI --> Actor: 24a. Informa el motivo del rechazo para reintentar
 end
 
-deactivate Gestor
-deactivate View
+deactivate CTRLCU
+deactivate UI
 
 @enduml
