@@ -1,0 +1,166 @@
+@startuml seq_cambiar_numero_camiseta
+!pragma layout smetana
+autonumber "<b>[00]</b>"
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam sequenceArrowThickness 1.5
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+
+' ==============================================================================
+' REALIZACIÓN DEL CASO DE USO: Cambiar el número de la camiseta
+' Escenario: Club Deportivo "Las Leonas del Sur" - Materia: DSI 2026
+' - Actor: Manager de Categoría (Sub-10, Sub-12, Sub-14, Sub-16, Sub-19, Primera)
+' - CTRLSesion preexistente para recuperar credenciales del usuario activo
+' - UI y CTRLCU sin atributos (Regla de oro de cátedra)
+' - Categoria como experta en la disponibilidad de dorsales de su plantel
+' - RegistroDeportivo para soporte del historial de camisetas y trayectoria
+' - Lista temporal creada e instanciada exclusivamente por Sistema (sin return/destroy)
+' ==============================================================================
+
+' 1. Participantes ordenados estrictamente de izquierda a derecha
+actor "Manager" as Actor
+boundary "PantallaGestionJugadoras" as UI <<Boundary>>
+control "CTRLCambiarNumeroCamiseta" as CTRLCU <<Control>>
+control "CTRLSesion" as CTRLSesion <<Control>>
+participant "Sistema" as Sistema <<Sistema>>
+entity "categoriaManager" as Categoria <<Entity>>
+collections "Jugadora" as Jugadoras <<Entity>>
+entity "listaJugadorasTemp" as ListaTemp <<Lista Temporal>>
+entity "jugadoraSeleccionada" as Jugadora <<Entity>>
+entity "registroActual" as Registro <<Entity>>
+
+' ------------------------------------------------------------------------------
+' FLUJO PRINCIPAL (CAMINO ESTÁNDAR)
+' ------------------------------------------------------------------------------
+
+' Paso 1: La manager ingresa a gestión de jugadoras
+Actor -> UI: 1. ingresarGestionJugadoras()
+activate UI
+
+UI -> CTRLCU: 2. iniciarGestionJugadoras()
+activate CTRLCU
+
+' Regla Cátedra: CTRLSesion preexistente provee credenciales del usuario activo
+CTRLCU -> CTRLSesion: 3. obtenerUsuarioLogueado()
+activate CTRLSesion
+CTRLSesion --> CTRLCU: 4. managerActiva
+deactivate CTRLSesion
+
+' Regla Cátedra: De CTRL a Sistema se usan verbos de negocio en español (NO "get")
+CTRLCU -> Sistema: 5. obtenerJugadorasACargo(managerActiva)
+activate Sistema
+
+' El sistema consulta la categoría asignada a la manager
+Sistema -> Actor: 6. getCategoria()
+activate Actor
+Actor --> Sistema: 7. categoriaManager
+deactivate Actor
+
+' Regla Cátedra: Sistema crea e instancia la lista temporal
+create ListaTemp
+Sistema -> ListaTemp: 8. create()
+
+Sistema -> Categoria: 9. getJugadoras()
+activate Categoria
+Categoria --> Sistema: 10. jugadoras
+deactivate Categoria
+
+loop para cada jugadora en jugadoras
+    ' Regla Cátedra: De Sistema a Entidad se usan getters get...()
+    Sistema -> Jugadoras: 11. getDatosJugadora()
+    activate Jugadoras
+    Jugadoras --> Sistema: 12. datosJugadora
+    deactivate Jugadoras
+
+    Sistema -> ListaTemp: 13. add(datosJugadora)
+end
+
+' Regla Cátedra: SIN retorno desde ListaTemp hacia Sistema
+' Regla Cátedra: Retorno con línea punteada sin la palabra "return"
+Sistema --> CTRLCU: 14. listaJugadorasTemp
+deactivate Sistema
+
+' Paso 2: El sistema le muestra las jugadoras a su cargo y las opciones de gestión
+CTRLCU --> UI: 15. mostrarJugadorasYOpciones(listaJugadorasTemp)
+deactivate CTRLCU
+UI --> Actor: 16. Despliega jugadoras de su categoría y opciones de gestión
+
+' Paso 3: La manager elige la jugadora deseada y la opción cambiar número de camiseta
+Actor -> UI: 17. seleccionarJugadoraYAccion(idJugadora)
+
+UI -> CTRLCU: 18. cambiarNumeroCamiseta(idJugadora)
+activate CTRLCU
+
+' Paso 4: El sistema le muestra el formulario de cambio de número de camiseta
+CTRLCU -> Sistema: 19. obtenerDatosJugadora(idJugadora)
+activate Sistema
+
+Sistema -> Jugadoras: 20. getDatosJugadora()
+activate Jugadoras
+Jugadoras --> Sistema: 21. datosJugadora
+deactivate Jugadoras
+
+Sistema --> CTRLCU: 22. datosJugadora
+deactivate Sistema
+
+CTRLCU --> UI: 23. mostrarFormularioCambioNumero(datosJugadora)
+deactivate CTRLCU
+UI --> Actor: 24. Despliega formulario de cambio de número de camiseta
+
+' Paso 5: La manager ingresa el nuevo número de camiseta y guarda el cambio
+Actor -> UI: 25. ingresarNuevoNumeroYGuardar(nuevoNumero)
+
+UI -> CTRLCU: 26. guardarCambioNumero(nuevoNumero)
+activate CTRLCU
+
+' Validación de negocio: verificación de dorsal único en la categoría (Patrón Experto)
+CTRLCU -> Sistema: 27. verificarDisponibilidadNumero(nuevoNumero)
+activate Sistema
+
+Sistema -> Categoria: 28. esNumeroDisponible(nuevoNumero)
+activate Categoria
+Categoria --> Sistema: 29. disponible (true)
+deactivate Categoria
+
+Sistema --> CTRLCU: 30. disponible (true)
+deactivate Sistema
+
+' Paso 6: El sistema solicita confirmación de cambio
+CTRLCU --> UI: 31. solicitarConfirmacionCambio(nuevoNumero)
+deactivate CTRLCU
+UI --> Actor: 32. Solicita confirmación para aplicar el nuevo número de camiseta
+
+' Paso 7: La manager selecciona aceptar
+Actor -> UI: 33. confirmarCambio()
+
+UI -> CTRLCU: 34. aceptarCambioNumero()
+activate CTRLCU
+
+' Paso 8: El sistema actualiza y muestra confirmación de cambio realizado
+CTRLCU -> Sistema: 35. actualizarNumeroCamiseta(idJugadora, nuevoNumero)
+activate Sistema
+
+' Regla Cátedra: Patrón Experto - la entidad Jugadora delega la actualización en su registro deportivo
+Sistema -> Jugadora: 36. modificarNumeroCamiseta(nuevoNumero)
+activate Jugadora
+
+Jugadora -> Registro: 37. setNumeroCamiseta(nuevoNumero)
+activate Registro
+Registro --> Jugadora: 38. confirmacion
+deactivate Registro
+
+Jugadora --> Sistema: 39. confirmacion
+deactivate Jugadora
+
+Sistema --> CTRLCU: 40. confirmacion
+deactivate Sistema
+
+CTRLCU --> UI: 41. mostrarConfirmacionCambio()
+deactivate CTRLCU
+
+UI --> Actor: 42. Despliega confirmación de cambio realizado exitosamente
+deactivate UI
+
+' Paso 9: Fin de CU
+@enduml

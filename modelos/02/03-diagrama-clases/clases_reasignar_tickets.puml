@@ -1,0 +1,149 @@
+@startuml clases_reasignar_tickets
+!pragma layout smetana
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+
+' ==============================================================================
+' DIAGRAMA DE CLASES: Realización de CU "Reasignar Tickets por Ausencia"
+' Aplicación: DevTrack (NubeSoft) - Materia: Diseño de Sistemas (DSI 2026)
+' - Se incluyen ÚNICAMENTE las clases involucradas en el caso de uso analizado.
+' - REGLA DE CÁTEDRA: UI y Controladores NO llevan atributos.
+' - Clases de dominio con atributos privados (-) y métodos públicos (+).
+' - Coherencia biunívoca total con los métodos invocados en el Diagrama de Secuencia.
+' ==============================================================================
+
+package "Capa de Presentación y Control" {
+    
+    ' UI: Sin atributos. Responsable de interacción con el Líder Técnico.
+    class "PantallaReasignarTickets" as UI <<Boundary>> {
+        + mostrarListaDesarrolladores(desarrolladores: List): void
+        + mostrarTicketsCandidatos(tickets: List): void
+        + mostrarDesarrolladoresDisponibles(desarrolladoresConCarga: List): void
+        + notificarReasignacionExitosa(): void
+        + mostrarResumenReasignados(resumen: List): void
+        + mostrarError(mensaje: String): void
+    }
+
+    ' Controlador del CU: Sin atributos. Coordina flujo, Trello y Sistema.
+    class "CTRLReasignarTickets" as CTRLCU <<Control>> {
+        + iniciarReasignacionAusencia(): void
+        + buscarTicketsCandidatos(idDesarrollador: int): void
+        + solicitarDesarrolladoresDisponibles(idTicket: int): void
+        + confirmarReasignacionTicket(idTicket: int, idNuevoDev: int): void
+        + obtenerResumenReasignaciones(): void
+    }
+
+    ' Controlador de Sesión: Sin atributos. Provee credenciales del Líder activo.
+    class "CTRLSesion" as CTRLSesion <<Control>> {
+        + obtenerUsuarioLogueado(): LiderTecnico
+    }
+
+    ' Sistema: Fachada de negocio. Conoce colecciones y administra transacciones.
+    class "Sistema" as Sistema <<Sistema>> {
+        + obtenerDesarrolladoresEquipo(lider: LiderTecnico): List
+        + obtenerTicketsActivos(idDesarrollador: int): List
+        + confirmarTicketCandidato(ticket: Ticket): void
+        + obtenerTicketsCandidatosFiltrados(): List
+        + obtenerDesarrolladoresConCarga(equipo: Equipo): List
+        + registrarReasignacion(idTicket: int, idNuevoDev: int, lider: LiderTecnico): void
+        + obtenerResumenReasignaciones(): List
+    }
+}
+
+package "Capa de Dominio" {
+    
+    class "LiderTecnico" as LiderTecnico <<Entity>> {
+        - idLider: int
+        - nombre: String
+        - apellido: String
+        - email: String
+        + getIdLider(): int
+        + getNombre(): String
+        + getEquipo(): Equipo
+    }
+
+    class "Desarrollador" as Desarrollador <<Entity>> {
+        - idDesarrollador: int
+        - nombre: String
+        - apellido: String
+        - email: String
+        - estadoDisponibilidad: String
+        + getIdDesarrollador(): int
+        + getNombre(): String
+        + calcularCargaSprint(): int
+    }
+
+    class "Equipo" as Equipo <<Entity>> {
+        - idEquipo: int
+        - nombre: String
+        + getIdEquipo(): int
+        + getNombre(): String
+        + getDesarrolladores(): List
+        + obtenerDesarrolladoresConCarga(): List
+    }
+
+    class "Ticket" as Ticket <<Entity>> {
+        - idTicket: int
+        - descripcion: String
+        - prioridad: String
+        - estado: String
+        - idTarjetaTrello: String
+        + getIdTicket(): int
+        + getDescripcion(): String
+        + getEstado(): String
+        + getIdTarjetaTrello(): String
+        + esDeDesarrolladorYActivo(idDev: int): boolean
+        + reasignarDesarrollador(nuevoDev: Desarrollador): void
+    }
+
+    ' Clase transaccional e histórica que registra cada cambio de asignación
+    class "Reasignacion" as Reasignacion <<Entity>> {
+        - idReasignacion: int
+        - fechaHora: DateTime
+        - motivo: String
+        + getIdReasignacion(): int
+        + getFechaHora(): DateTime
+        + getDetalleResumen(): String
+    }
+}
+
+' ------------------------------------------------------------------------------
+' RELACIONES
+' ------------------------------------------------------------------------------
+
+' Flujo de Control y Dependencias
+UI ..> CTRLCU : invoca eventos >
+CTRLCU --> CTRLSesion : consulta sesión >
+CTRLCU --> Sistema : delega operaciones >
+
+' Sistema administra y conoce las colecciones globales
+Sistema o-- "*" Ticket : ticketsRegistrados
+Sistema o-- "*" Equipo : equiposRegistrados
+Sistema o-- "*" Reasignacion : reasignacionesRegistradas
+
+' Relaciones estructurales del Dominio
+Equipo "1" -- "1" LiderTecnico : liderado por >
+Equipo "1" o-- "1..*" Desarrollador : conformado por >
+Ticket "*" --> "1" Desarrollador : asignado a >
+
+' Relaciones de la Clase Transaccional Reasignacion
+Reasignacion "*" --> "1" Ticket : transfiere >
+Reasignacion "*" --> "1" LiderTecnico : ejecutada por >
+Reasignacion "*" --> "1" Desarrollador : devAnterior >
+Reasignacion "*" --> "1" Desarrollador : devNuevo >
+
+note bottom of Reasignacion
+  **Clase Transaccional e Histórica:**
+  Registra la trazabilidad inmutable de cada
+  reasignación con fecha, responsable y desarrolladores.
+end note
+
+note top of CTRLCU
+  **Comunicación con Actor Externo:**
+  El controlador se comunica directamente con Trello
+  mediante mensajes asíncronos para validar el estado.
+end note
+
+@enduml

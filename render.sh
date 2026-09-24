@@ -97,7 +97,9 @@ render_single_file() {
     basename="${filename%.*}"
     output_file="$dir/$basename.$FORMAT"
 
-    echo -ne "  ${COLOR_CYAN}➜${COLOR_RESET} Compilando ${COLOR_BOLD}$file${COLOR_RESET} a ${FORMAT^^}... "
+    local format_upper
+    format_upper="$(echo "$FORMAT" | tr '[:lower:]' '[:upper:]')"
+    echo -ne "  ${COLOR_CYAN}➜${COLOR_RESET} Compilando ${COLOR_BOLD}$file${COLOR_RESET} a ${format_upper}... "
 
     # Ejecutar compilación con PlantUML
     # -t$FORMAT : tipo de salida (svg, png, etc.)

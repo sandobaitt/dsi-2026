@@ -1,0 +1,190 @@
+@startuml secuencia_reasignar_tickets
+!pragma layout smetana
+autonumber "<b>[00]</b>"
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam sequenceArrowThickness 1.5
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+
+' ==============================================================================
+' REALIZACIÓN DEL CASO DE USO: Reasignar Tickets por Ausencia de Desarrollador
+' Aplicación: DevTrack (NubeSoft) - Materia: Diseño de Sistemas (DSI 2026)
+' - CTRLSesion preexistente para recuperar credenciales del Líder Técnico activo
+' - UI y CTRLCU sin atributos (Regla de oro de cátedra)
+' - Trello tratado como ACTOR EXTERNO con comunicación asíncrona (->>)
+' - Listas temporales creadas y administradas por Sistema (sin return/destroy)
+' - Creación de la entidad transaccional Reasignacion para auditoría e historial
+' ==============================================================================
+
+' 1. Participantes ordenados estrictamente de izquierda a derecha
+actor "Líder Técnico" as Actor
+boundary "PantallaReasignarTickets" as UI <<Boundary>>
+control "CTRLReasignarTickets" as CTRLCU <<Control>>
+control "CTRLSesion" as CTRLSesion <<Control>>
+participant "Sistema" as Sistema <<Sistema>>
+entity "equipoLider" as Equipo <<Entity>>
+collections "Ticket" as Tickets <<Entity>>
+entity "listaTemp" as TempList <<Lista Temporal>>
+actor "Trello" as Trello <<Actor Externo>>
+entity "ticketSeleccionado" as Ticket <<Entity>>
+entity "nuevaReasignacion" as Reasignacion <<Entity>>
+
+' ------------------------------------------------------------------------------
+' FLUJO PRINCIPAL (CAMINO ESTÁNDAR)
+' ------------------------------------------------------------------------------
+
+' Paso 1 y 2: El Líder ingresa a reasignar tickets por ausencia
+Actor -> UI: 1. solicitarReasignacionAusencia()
+activate UI
+
+UI -> CTRLCU: 2. iniciarReasignacionAusencia()
+activate CTRLCU
+
+' Regla Cátedra: CTRLSesion preexistente provee credenciales del usuario activo
+CTRLCU -> CTRLSesion: 3. obtenerUsuarioLogueado()
+activate CTRLSesion
+CTRLSesion --> CTRLCU: 4. liderActivo
+deactivate CTRLSesion
+
+' Consulta del equipo a cargo y desarrolladores del equipo
+CTRLCU -> Sistema: 5. obtenerDesarrolladoresEquipo(liderActivo)
+activate Sistema
+
+Sistema -> Actor: 6. getEquipo()
+activate Actor
+Actor --> Sistema: 7. equipoLider
+deactivate Actor
+
+Sistema -> Equipo: 8. getDesarrolladores()
+activate Equipo
+Equipo --> Sistema: 9. desarrolladores
+deactivate Equipo
+
+Sistema --> CTRLCU: 10. desarrolladores
+deactivate Sistema
+
+' Paso 3: El sistema muestra la lista de desarrolladores del equipo
+CTRLCU --> UI: 11. mostrarListaDesarrolladores(desarrolladores)
+deactivate CTRLCU
+UI --> Actor: 12. Despliega nómina de desarrolladores del equipo
+
+' Paso 4: El Líder Técnico selecciona el desarrollador que se ausenta
+Actor -> UI: 13. seleccionarDesarrolladorAusente(idDesarrollador)
+
+UI -> CTRLCU: 14. buscarTicketsCandidatos(idDesarrollador)
+activate CTRLCU
+
+' Paso 5: El sistema busca los tickets activos del desarrollador
+CTRLCU -> Sistema: 15. obtenerTicketsActivos(idDesarrollador)
+activate Sistema
+
+create TempList
+Sistema -> TempList: 16. create()
+
+loop para cada ticket en ticketsRegistrados
+    Sistema -> Tickets: 17. esDeDesarrolladorYActivo(idDesarrollador)
+    activate Tickets
+    Tickets --> Sistema: 18. esCandidato
+    deactivate Tickets
+
+    opt esCandidato == true
+        Sistema -> TempList: 19. add(ticket)
+    end
+end
+
+Sistema --> CTRLCU: 20. listaTicketsActivos
+deactivate Sistema
+
+' Paso 6: El sistema consulta a Trello por el estado de las tarjetas
+loop para cada ticket con tarjeta en listaTicketsActivos
+    ' Regla Cátedra: Mensaje asíncrono con flecha abierta hacia ACTOR EXTERNO
+    CTRLCU ->> Trello: 21. consultarEstadoTarjeta(idTarjetaTrello)
+    activate Trello
+    Trello -->> CTRLCU: 22. columnaTarjeta ("En progreso")
+    deactivate Trello
+
+    opt columnaTarjeta != "Hecho"
+        CTRLCU -> Sistema: 23. confirmarTicketCandidato(ticket)
+    end
+end
+
+CTRLCU -> Sistema: 24. obtenerTicketsCandidatosFiltrados()
+activate Sistema
+Sistema --> CTRLCU: 25. listaTicketsCandidatos
+deactivate Sistema
+
+CTRLCU --> UI: 26. mostrarTicketsCandidatos(listaTicketsCandidatos)
+deactivate CTRLCU
+UI --> Actor: 27. Despliega tickets candidatos a reasignación
+
+' Pasos 7 a 12: Bucle de reasignación de tickets
+loop mientras existan tickets pendientes y el Líder decida continuar
+    ' Paso 7: El Líder selecciona un ticket de la lista
+    Actor -> UI: 28. seleccionarTicketAReasignar(idTicket)
+
+    ' Paso 8: El sistema muestra desarrolladores disponibles y su carga en el sprint
+    UI -> CTRLCU: 29. solicitarDesarrolladoresDisponibles(idTicket)
+    activate CTRLCU
+
+    CTRLCU -> Sistema: 30. obtenerDesarrolladoresConCarga(equipoLider)
+    activate Sistema
+
+    Sistema -> Equipo: 31. obtenerDesarrolladoresConCarga()
+    activate Equipo
+    Equipo --> Sistema: 32. listaDesarrolladoresCarga
+    deactivate Equipo
+
+    Sistema --> CTRLCU: 33. listaDesarrolladoresCarga
+    deactivate Sistema
+
+    CTRLCU --> UI: 34. mostrarDesarrolladoresDisponibles(listaDesarrolladoresCarga)
+    deactivate CTRLCU
+    UI --> Actor: 35. Despliega desarrolladores y su carga de trabajo en el sprint
+
+    ' Paso 9: El Líder selecciona el nuevo desarrollador para ese ticket
+    Actor -> UI: 36. asignarNuevoDesarrollador(idTicket, idNuevoDev)
+
+    UI -> CTRLCU: 37. confirmarReasignacionTicket(idTicket, idNuevoDev)
+    activate CTRLCU
+
+    ' Paso 10 y 11: Actualiza ticket y registra la reasignación
+    CTRLCU -> Sistema: 38. registrarReasignacion(idTicket, idNuevoDev, liderActivo)
+    activate Sistema
+
+    ' Patrón experto: la entidad Ticket actualiza su desarrollador asignado
+    Sistema -> Ticket: 39. reasignarDesarrollador(nuevoDev)
+    activate Ticket
+    Ticket --> Sistema: 40. confirmacion
+    deactivate Ticket
+
+    ' Creación de la entidad transaccional e histórica Reasignacion
+    create Reasignacion
+    Sistema -> Reasignacion: 41. create(ticket, devAnterior, nuevoDev, liderActivo, fechaHora)
+
+    Sistema --> CTRLCU: 42. confirmacion
+    deactivate Sistema
+
+    CTRLCU --> UI: 43. notificarReasignacionExitosa()
+    deactivate CTRLCU
+    UI --> Actor: 44. Muestra confirmación de reasignación realizada
+end
+
+' Paso 13: El Líder finaliza y el sistema muestra el resumen
+Actor -> UI: 45. finalizarReasignacion()
+
+UI -> CTRLCU: 46. obtenerResumenReasignaciones()
+activate CTRLCU
+
+CTRLCU -> Sistema: 47. obtenerResumenReasignaciones()
+activate Sistema
+Sistema --> CTRLCU: 48. listaResumen
+deactivate Sistema
+
+CTRLCU --> UI: 49. mostrarResumenReasignados(listaResumen)
+deactivate CTRLCU
+
+UI --> Actor: 50. Despliega resumen consolidado de los tickets reasignados
+deactivate UI
+
+@enduml

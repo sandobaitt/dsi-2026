@@ -1,0 +1,136 @@
+@startuml clases_cambiar_numero_camiseta
+!pragma layout smetana
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+
+' ==============================================================================
+' DIAGRAMA DE CLASES: Realización de CU "Cambiar el número de la camiseta"
+' Escenario: Club Deportivo "Las Leonas del Sur" - Materia: DSI 2026
+' - Se incluyen ÚNICAMENTE las clases involucradas en el caso de uso analizado.
+' - REGLA DE CÁTEDRA: UI y Controladores NO llevan atributos.
+' - Clases de dominio con atributos privados (-) y métodos públicos (+).
+' - Coherencia biunívoca total con los métodos invocados en el Diagrama de Secuencia.
+' ==============================================================================
+
+package "Capa de Presentación y Control" {
+    
+    ' UI: Sin atributos. Responsable de la interacción con la manager.
+    class "PantallaGestionJugadoras" as UI <<Boundary>> {
+        + mostrarJugadorasYOpciones(listaJugadoras: List): void
+        + mostrarFormularioCambioNumero(datosJugadora: Jugadora): void
+        + solicitarConfirmacionCambio(nuevoNumero: int): void
+        + mostrarConfirmacionCambio(): void
+        + mostrarError(mensaje: String): void
+    }
+
+    ' Controlador del CU: Sin atributos. Coordina el flujo de pasos.
+    class "CTRLCambiarNumeroCamiseta" as CTRLCU <<Control>> {
+        + iniciarGestionJugadoras(): void
+        + cambiarNumeroCamiseta(idJugadora: int): void
+        + guardarCambioNumero(nuevoNumero: int): void
+        + aceptarCambioNumero(): void
+    }
+
+    ' Controlador de Sesión: Sin atributos. Provee credenciales de la manager activa.
+    class "CTRLSesion" as CTRLSesion <<Control>> {
+        + obtenerUsuarioLogueado(): Manager
+    }
+
+    ' Sistema: Fachada de negocio. Conoce colecciones y delega a las entidades.
+    class "Sistema" as Sistema <<Sistema>> {
+        + obtenerJugadorasACargo(manager: Manager): List
+        + obtenerDatosJugadora(idJugadora: int): Jugadora
+        + verificarDisponibilidadNumero(nuevoNumero: int): boolean
+        + actualizarNumeroCamiseta(idJugadora: int, nuevoNumero: int): void
+    }
+}
+
+package "Capa de Dominio" {
+    
+    class "Manager" as Manager <<Entity>> {
+        - idManager: int
+        - nombre: String
+        - apellido: String
+        - email: String
+        - telefono: String
+        + getIdManager(): int
+        + getNombre(): String
+        + getApellido(): String
+        + getEmail(): String
+        + getCategoria(): Categoria
+    }
+
+    class "Categoria" as Categoria <<Entity>> {
+        - idCategoria: int
+        - nombre: String
+        - edadMinima: int
+        - edadMaxima: int
+        + getIdCategoria(): int
+        + getNombre(): String
+        + getJugadoras(): List
+        + esNumeroDisponible(numero: int): boolean
+    }
+
+    class "Jugadora" as Jugadora <<Entity>> {
+        - idJugadora: int
+        - nombre: String
+        - apellido: String
+        - fechaNacimiento: Date
+        - telefonoContacto: String
+        + getIdJugadora(): int
+        + getNombre(): String
+        + getApellido(): String
+        + getDatosJugadora(): String
+        + modificarNumeroCamiseta(nuevoNumero: int): void
+    }
+
+    ' Clase que almacena la trayectoria deportiva e historial de dorsales por temporada
+    class "RegistroDeportivo" as RegistroDeportivo <<Entity>> {
+        - idRegistro: int
+        - temporada: int
+        - numeroCamiseta: int
+        - posicionHabitual: String
+        - esRefuerzo: boolean
+        - fechaAsignacion: Date
+        + getNumeroCamiseta(): int
+        + setNumeroCamiseta(nuevoNumero: int): void
+        + getTemporada(): int
+        + getPosicionHabitual(): String
+    }
+}
+
+' ------------------------------------------------------------------------------
+' RELACIONES
+' ------------------------------------------------------------------------------
+
+' Flujo de Control y Dependencias
+UI ..> CTRLCU : invoca >
+CTRLCU --> CTRLSesion : consulta sesión >
+CTRLCU --> Sistema : delega operaciones >
+
+' Sistema administra y conoce las colecciones globales
+Sistema o-- "*" Manager : managersRegistrados
+Sistema o-- "*" Categoria : categoriasRegistradas
+Sistema o-- "*" Jugadora : jugadorasRegistradas
+
+' Relaciones estructurales del Modelo de Dominio
+Categoria "1" -- "1..*" Manager : tiene asignado >
+Categoria "1" o-- "*" Jugadora : integran >
+Jugadora "1" *-- "1..*" RegistroDeportivo : historialDeportivo >
+
+note bottom of RegistroDeportivo
+  **Soporte Histórico de Trayectoria:**
+  Almacena el número de camiseta, temporada,
+  posición y condición de refuerzo requeridos
+  para conservar la historia de cada jugadora.
+end note
+
+note top of Categoria
+  **Entidad Experta en Validación:**
+  Verifica si el dorsal ingresado ya está
+  asignado a otra jugadora de su categoría.
+end note
+
+@enduml
