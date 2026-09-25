@@ -11,9 +11,10 @@ skinparam responseMessageBelowArrow true
 ' DIAGRAMA DE SECUENCIA: Realización de CU "Armar Hoja de Ruta" (Camino Estándar)
 ' Modelo 03: Fábrica de Muebles Metálicos - Materia: Diseño de Sistemas (DSI 2026)
 ' - CTRLSesion preexistente para usuario activo
-' - Lista temporal creada e instanciada exclusivamente por Sistema
-' - Sin mensaje de retorno desde lista temporal hacia Sistema
-' - Sin llamadas destroy (optimización de parcial) y sin palabra clave return
+' - Búsqueda explícita del mueble, su plantilla y las tareas estándar
+' - Listas temporales creadas e instanciadas exclusivamente por Sistema
+' - Pre-vista clara: lista temporal de tareas y tiempo total acumulado
+' - Sin llamadas redundantes de cálculo y sin palabra clave return
 ' - Coherencia total con los métodos del Diagrama de Clases
 ' ==============================================================================
 
@@ -26,8 +27,10 @@ participant "Sistema" as Sistema <<Sistema>>
 collections "Pedido" as Pedidos <<Entity>>
 collections "Linea_pedido" as Lineas <<Entity>>
 collections "Mueble" as Muebles <<Entity>>
-entity "listaMueblesTemp" as ListaTemp <<Lista Temporal>>
+entity "listaMueblesTemp" as ListaMueblesTemp <<Lista Temporal>>
 collections "Plantilla_tarea" as Plantillas <<Entity>>
+collections "Tarea" as Tareas <<Entity>>
+entity "listaTareasTemp" as ListaTareasTemp <<Lista Temporal>>
 entity "nuevaHR" as HojaDeRuta <<Entity>>
 
 ' ------------------------------------------------------------------------------
@@ -51,9 +54,9 @@ deactivate CTRLSesion
 CTRL -> Sistema: 5. obtenerMueblesPedidosPendientes()
 activate Sistema
 
-' Regla Cátedra: Sistema es el único responsable de crear listas temporales
-create ListaTemp
-Sistema -> ListaTemp: 6. create()
+' Regla Cátedra: Sistema crea la lista temporal para mostrar los muebles disponibles
+create ListaMueblesTemp
+Sistema -> ListaMueblesTemp: 6. create()
 
 ' Bucle para obtener muebles de los pedidos pendientes
 loop para cada pedido en pedidosPendientes
@@ -74,7 +77,7 @@ loop para cada pedido en pedidosPendientes
         deactivate Muebles
 
         ' Regla Cátedra: Sistema añade a la lista que ya referencia
-        Sistema -> ListaTemp: 13. add(mueble)
+        Sistema -> ListaMueblesTemp: 13. add(mueble)
     end
 end
 
@@ -90,6 +93,8 @@ deactivate CTRL
 UI --> Actor: 16. Despliega los muebles correspondientes a pedidos pendientes
 deactivate UI
 
+destroy ListaMueblesTemp
+
 ' Paso 3: El Jefe de Taller selecciona el mueble requerido
 Actor -> UI: 17. seleccionarMueble(idMueble)
 activate UI
@@ -100,53 +105,84 @@ activate CTRL
 CTRL -> Sistema: 19. obtenerPreVistaHR(idMueble)
 activate Sistema
 
-Sistema -> Muebles: 20. getPlantillaTarea()
+' Búsqueda e identificación del Mueble seleccionado en la colección
+loop para cada mueble en catalogoMuebles
+    Sistema -> Muebles: 20. getIdMueble()
+    activate Muebles
+    Muebles --> Sistema: 21. idActual
+    deactivate Muebles
+end
+
+' Se obtiene la plantilla de tareas asociada al mueble específico
+Sistema -> Muebles: 22. getPlantillaTarea()
 activate Muebles
-Muebles --> Sistema: 21. plantilla
+Muebles --> Sistema: 23. plantilla
 deactivate Muebles
 
-Sistema -> Plantillas: 22. getTareas()
+' Búsqueda y obtención de las tareas de la plantilla
+Sistema -> Plantillas: 24. getTareas()
 activate Plantillas
-Plantillas --> Sistema: 23. tareasEstandar
+Plantillas --> Sistema: 25. listaTareas
 deactivate Plantillas
 
-Sistema --> CTRL: 24. datosPreVistaHR
+' Regla Cátedra: Sistema crea la lista temporal para la pre-vista de las tareas
+create ListaTareasTemp
+Sistema -> ListaTareasTemp: 26. create()
+
+' Recorrido de cada tarea para obtener sus datos de detalle y acumular la duración
+loop para cada tarea en listaTareas
+    Sistema -> Tareas: 27. getDescripcion()
+    activate Tareas
+    Tareas --> Sistema: 28. descripcion
+    deactivate Tareas
+
+    Sistema -> Tareas: 29. getDuracionEstimada()
+    activate Tareas
+    Tareas --> Sistema: 30. duracionEstimada
+    deactivate Tareas
+
+    ' Se agrega cada tarea a la lista temporal de la pre-vista
+    Sistema -> ListaTareasTemp: 31. add(tarea)
+end
+
+' Cálculo único del tiempo total estimado a partir de las tareas de la plantilla
+Sistema -> Sistema: 32. calcularTiempoTotal(listaTareas)
+
+' Retorno de los datos concretos de la pre-vista: la lista de tareas y el tiempo total
+Sistema --> CTRL: 33. (listaTareasTemp, tiempoTotalEstimado)
 deactivate Sistema
 
 ' Paso 4: El Sistema muestra la pre-vista de la hoja de ruta
-CTRL --> UI: 25. mostrarPreVistaHR(datosPreVistaHR)
+CTRL --> UI: 34. mostrarPreVistaHR(listaTareasTemp, tiempoTotalEstimado)
 deactivate CTRL
 
-UI --> Actor: 26. Muestra pre-vista de la hoja de ruta con tareas y duración estimada
+UI --> Actor: 35. Muestra la lista de tareas estándar con sus duraciones y el tiempo total estimado
 deactivate UI
 
 ' Paso 5: El Jefe de Taller confirma la hoja de ruta
-Actor -> UI: 27. confirmarHojaRuta()
+Actor -> UI: 36. confirmarHojaRuta()
 activate UI
 
-UI -> CTRL: 28. confirmarHojaRuta()
+UI -> CTRL: 37. confirmarHojaRuta()
 activate CTRL
 
-' Paso 6: El Sistema registra y emite la impresión de la hoja de ruta
-CTRL -> Sistema: 29. registrarEImprimirHR(idMueble)
+' Paso 6: El Sistema registra y emite la impresión de la hoja de ruta definitiva
+CTRL -> Sistema: 38. registrarEImprimirHR(idMueble)
 activate Sistema
 
 create HojaDeRuta
-Sistema -> HojaDeRuta: 30. create(mueble, tareasEstandar)
+Sistema -> HojaDeRuta: 39. create(mueble, tiempoTotalEstimado, listaTareas)
 
-Sistema -> HojaDeRuta: 31. calcularTiempoTotal()
-activate HojaDeRuta
-HojaDeRuta --> Sistema: 32. tiempoTotal
-deactivate HojaDeRuta
+destroy ListaTareasTemp
 
-' Regla Cátedra: SIN destroy para lista temporal
-Sistema --> CTRL: 33. hojaDeRutaGenerada
+' Regla Cátedra: Retorno con línea discontinua sin return
+Sistema --> CTRL: 40. hojaDeRutaGenerada
 deactivate Sistema
 
-CTRL --> UI: 34. imprimirHojaRuta(hojaDeRutaGenerada)
+CTRL --> UI: 41. imprimirHojaRuta(hojaDeRutaGenerada)
 deactivate CTRL
 
-UI --> Actor: 35. Emite e imprime las copias de la hoja de ruta para los operarios de sección
+UI --> Actor: 42. Emite e imprime las copias de la hoja de ruta para los operarios de sección
 deactivate UI
 
 @enduml

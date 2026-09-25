@@ -38,6 +38,7 @@ Esta skill establece las reglas y criterios de evaluación de la cátedra de **D
 3. ¿Necesita buscar en una colección global, registrar un alta o calcular a nivel general? $\rightarrow$ **Sistema**
 4. ¿Es información o validación propia de un objeto concreto? $\rightarrow$ **Clase de Dominio**
 5. **Regla de Coherencia Bidireccional:** Todo mensaje que llegue a una línea de vida en el Diagrama de Secuencia **debe figurar como método en esa clase en el Diagrama de Clases**.
+6. **Especificación Obligatoria de Parámetros:** Si una operación requiere datos de entrada, **es obligatorio especificar los parámetros con sus tipos** en la firma del método (ej: `+ seleccionarMueble(idMueble: int): void`, `+ calcularTiempoTotal(tareas: List): int`). Prohibido dejar paréntesis vacíos en métodos que procesan argumentos.
 
 ### 4. Relaciones y Notaciones
 - **Herencia / Generalización (`<|--`):** Línea sólida con triángulo hueco hacia el padre.

@@ -20,7 +20,7 @@ package "Capa de Presentación y Control" {
         + solicitarArmadoHR(): void
         + mostrarMuebles(muebles: List): void
         + seleccionarMueble(idMueble: int): void
-        + mostrarPreVistaHR(datosHR: HojaDeRuta): void
+        + mostrarPreVistaHR(tareas: List, tiempoTotal: int): void
         + confirmarHojaRuta(): void
         + imprimirHojaRuta(hr: HojaDeRuta): void
     }
@@ -41,6 +41,7 @@ package "Capa de Presentación y Control" {
     class "Sistema" as Sistema <<Sistema>> {
         + obtenerMueblesPedidosPendientes(): List
         + obtenerPreVistaHR(idMueble: int): HojaDeRuta
+        + calcularTiempoTotal(tareas: List): int
         + registrarEImprimirHR(idMueble: int): HojaDeRuta
     }
 }
