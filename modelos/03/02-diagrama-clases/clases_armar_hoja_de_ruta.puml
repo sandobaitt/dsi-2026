@@ -1,0 +1,148 @@
+@startuml clases_armar_hoja_de_ruta
+!pragma layout smetana
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+
+' ==============================================================================
+' DIAGRAMA DE CLASES: Realización de CU "Armar Hoja de Ruta"
+' Modelo 03: Fábrica de Muebles Metálicos - Materia: Diseño de Sistemas (DSI 2026)
+' - Estructura basada estrictamente en el diagrama de clases del ejercicio
+' - REGLA DE ORO DE CÁTEDRA: UISolHR y CTRLSolHR NO llevan atributos
+' - Clases de dominio con atributos privados (-) y métodos públicos (+)
+' ==============================================================================
+
+package "Capa de Presentación y Control" {
+    
+    ' UI: Sin atributos. Responsable de interacción con el Jefe de Taller.
+    class "UISolHR" as UI <<Boundary>> {
+        + solicitarArmadoHR(): void
+        + mostrarMuebles(muebles: List): void
+        + seleccionarMueble(idMueble: int): void
+        + mostrarPreVistaHR(datosHR: HojaDeRuta): void
+        + confirmarHojaRuta(): void
+        + imprimirHojaRuta(hr: HojaDeRuta): void
+    }
+
+    ' Controlador del CU: Sin atributos. Coordina el flujo del CU.
+    class "CTRLSolHR" as CTRL <<Control>> {
+        + iniciarArmadoHR(): void
+        + procesarSeleccionMueble(idMueble: int): void
+        + confirmarHojaRuta(): void
+    }
+
+    ' Controlador de Sesión: Sin atributos. Provee credenciales del usuario activo.
+    class "CTRLSesion" as CTRLSesion <<Control>> {
+        + obtenerUsuarioLogueado(): Usuario
+    }
+
+    ' Sistema: Fachada de negocio. Conoce colecciones de Pedido, Mueble y Seccion.
+    class "Sistema" as Sistema <<Sistema>> {
+        + obtenerMueblesPedidosPendientes(): List
+        + obtenerPreVistaHR(idMueble: int): HojaDeRuta
+        + registrarEImprimirHR(idMueble: int): HojaDeRuta
+    }
+}
+
+package "Capa de Dominio" {
+    
+    class "Pedido" as Pedido <<Entity>> {
+        - nroPedido: int
+        - fecha: Date
+        - estado: String
+        + getLineasPedido(): List
+        + estaPendiente(): boolean
+    }
+
+    class "Linea_pedido" as Linea_pedido <<Entity>> {
+        - cantidad: int
+        + getMueble(): Mueble
+        + getCantidad(): int
+    }
+
+    class "Mueble" as Mueble <<Entity>> {
+        - idMueble: int
+        - nombre: String
+        - descripcion: String
+        + getIdMueble(): int
+        + getNombre(): String
+        + getPlantillaTarea(): Plantilla_tarea
+    }
+
+    class "Plantilla_tarea" as Plantilla_tarea <<Entity>> {
+        - idPlantilla: int
+        - descripcion: String
+        + getTareas(): List
+        + getSeccion(): Seccion
+    }
+
+    class "Tarea" as Tarea <<Entity>> {
+        - idTarea: int
+        - descripcion: String
+        - duracionEstimada: int
+        + getDuracionEstimada(): int
+        + getDescripcion(): String
+    }
+
+    class "Seccion" as Seccion <<Entity>> {
+        - idSeccion: int
+        - nombreSeccion: String
+        + getOperariosDisponibles(): List
+        + getNombreSeccion(): String
+    }
+
+    class "Operario" as Operario <<Entity>> {
+        - legajo: int
+        - nombre: String
+        - disponible: boolean
+        + getLegajo(): int
+        + estaDisponible(): boolean
+    }
+
+    ' Clase transaccional del caso de uso
+    class "Hoja de Ruta" as HojaDeRuta <<Entity>> {
+        - nroHojaRuta: int
+        - fechaEmision: Date
+        - tiempoTotalEstimado: int
+        - estado: String
+        + calcularTiempoTotal(): int
+        + agregarTarea(t: Tarea): void
+        + asignarOperario(op: Operario): void
+        + getNroHojaRuta(): int
+    }
+}
+
+' ------------------------------------------------------------------------------
+' RELACIONES (Fieles al diagrama de cátedra provisto en el enunciado)
+' ------------------------------------------------------------------------------
+
+' Control y Navegación
+UI ..> CTRL : invoca eventos >
+CTRL --> CTRLSesion : consulta sesión >
+CTRL --> Sistema : delega operaciones >
+
+' Sistema conoce las colecciones globales (Agregaciones rombo blanco)
+Sistema o-- "*" Pedido : pedidosRegistrados
+Sistema o-- "*" Mueble : catalogoMuebles
+Sistema o-- "*" Seccion : seccionesTaller
+
+' Pedido y Detalle
+Pedido "1" *-- "1..*" Linea_pedido : contiene >
+Linea_pedido "*" --> "1" Mueble : referencia a >
+
+' Mueble y Plantilla de Tareas
+Mueble "1" -- "1" Plantilla_tarea : cuenta con >
+Plantilla_tarea "1" *-- "1..*" Tarea : compone >
+Plantilla_tarea "*" -- "1" Seccion : asignada a >
+
+' Seccion y Operarios
+Seccion "1" *-- "1..*" Operario : conformada por >
+
+' Hoja de Ruta (Producto del caso de uso)
+HojaDeRuta "*" --> "1" Mueble : generada para >
+HojaDeRuta "*" --> "1" Seccion : ejecutada en >
+HojaDeRuta "1" o-- "1..*" Tarea : listaTareas
+HojaDeRuta "1" o-- "1..*" Operario : operariosAsignados
+
+@enduml

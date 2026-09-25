@@ -1,0 +1,152 @@
+@startuml secuencia_armar_hoja_de_ruta
+!pragma layout smetana
+autonumber "<b>[00]</b>"
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam sequenceArrowThickness 1.5
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+
+' ==============================================================================
+' DIAGRAMA DE SECUENCIA: Realización de CU "Armar Hoja de Ruta" (Camino Estándar)
+' Modelo 03: Fábrica de Muebles Metálicos - Materia: Diseño de Sistemas (DSI 2026)
+' - CTRLSesion preexistente para usuario activo
+' - Lista temporal creada e instanciada exclusivamente por Sistema
+' - Sin mensaje de retorno desde lista temporal hacia Sistema
+' - Sin llamadas destroy (optimización de parcial) y sin palabra clave return
+' - Coherencia total con los métodos del Diagrama de Clases
+' ==============================================================================
+
+' 1. Participantes ordenados de izquierda a derecha
+actor "Jefe de Taller" as Actor
+boundary "UISolHR" as UI <<Boundary>>
+control "CTRLSolHR" as CTRL <<Control>>
+control "CTRLSesion" as CTRLSesion <<Control>>
+participant "Sistema" as Sistema <<Sistema>>
+collections "Pedido" as Pedidos <<Entity>>
+collections "Linea_pedido" as Lineas <<Entity>>
+collections "Mueble" as Muebles <<Entity>>
+entity "listaMueblesTemp" as ListaTemp <<Lista Temporal>>
+collections "Plantilla_tarea" as Plantillas <<Entity>>
+entity "nuevaHR" as HojaDeRuta <<Entity>>
+
+' ------------------------------------------------------------------------------
+' FLUJO PRINCIPAL (CAMINO ESTÁNDAR)
+' ------------------------------------------------------------------------------
+
+' Paso 1: El Jefe de Taller solicita la Hoja de Ruta
+Actor -> UI: 1. solicitarArmadoHR()
+activate UI
+
+UI -> CTRL: 2. iniciarArmadoHR()
+activate CTRL
+
+' Regla Cátedra: Consulta de sesión preexistente sin pedir credenciales al actor
+CTRL -> CTRLSesion: 3. obtenerUsuarioLogueado()
+activate CTRLSesion
+CTRLSesion --> CTRL: 4. jefeTallerActivo
+deactivate CTRLSesion
+
+' Regla Cátedra: De CTRL a Sistema se usa "obtener...()"
+CTRL -> Sistema: 5. obtenerMueblesPedidosPendientes()
+activate Sistema
+
+' Regla Cátedra: Sistema es el único responsable de crear listas temporales
+create ListaTemp
+Sistema -> ListaTemp: 6. create()
+
+' Bucle para obtener muebles de los pedidos pendientes
+loop para cada pedido en pedidosPendientes
+    Sistema -> Pedidos: 7. getLineasPedido()
+    activate Pedidos
+    Pedidos --> Sistema: 8. lineasPedido
+    deactivate Pedidos
+
+    loop para cada linea en lineasPedido
+        Sistema -> Lineas: 9. getMueble()
+        activate Lineas
+        Lineas --> Sistema: 10. mueble
+        deactivate Lineas
+
+        Sistema -> Muebles: 11. getNombre()
+        activate Muebles
+        Muebles --> Sistema: 12. nombreMueble
+        deactivate Muebles
+
+        ' Regla Cátedra: Sistema añade a la lista que ya referencia
+        Sistema -> ListaTemp: 13. add(mueble)
+    end
+end
+
+' Regla Cátedra: SIN retorno desde ListaTemp hacia Sistema
+' Retorno con línea discontinua sin la palabra return
+Sistema --> CTRL: 14. listaMueblesTemp
+deactivate Sistema
+
+' Paso 2: El Sistema muestra los diferentes muebles
+CTRL --> UI: 15. mostrarMuebles(listaMueblesTemp)
+deactivate CTRL
+
+UI --> Actor: 16. Despliega los muebles correspondientes a pedidos pendientes
+deactivate UI
+
+' Paso 3: El Jefe de Taller selecciona el mueble requerido
+Actor -> UI: 17. seleccionarMueble(idMueble)
+activate UI
+
+UI -> CTRL: 18. procesarSeleccionMueble(idMueble)
+activate CTRL
+
+CTRL -> Sistema: 19. obtenerPreVistaHR(idMueble)
+activate Sistema
+
+Sistema -> Muebles: 20. getPlantillaTarea()
+activate Muebles
+Muebles --> Sistema: 21. plantilla
+deactivate Muebles
+
+Sistema -> Plantillas: 22. getTareas()
+activate Plantillas
+Plantillas --> Sistema: 23. tareasEstandar
+deactivate Plantillas
+
+Sistema --> CTRL: 24. datosPreVistaHR
+deactivate Sistema
+
+' Paso 4: El Sistema muestra la pre-vista de la hoja de ruta
+CTRL --> UI: 25. mostrarPreVistaHR(datosPreVistaHR)
+deactivate CTRL
+
+UI --> Actor: 26. Muestra pre-vista de la hoja de ruta con tareas y duración estimada
+deactivate UI
+
+' Paso 5: El Jefe de Taller confirma la hoja de ruta
+Actor -> UI: 27. confirmarHojaRuta()
+activate UI
+
+UI -> CTRL: 28. confirmarHojaRuta()
+activate CTRL
+
+' Paso 6: El Sistema registra y emite la impresión de la hoja de ruta
+CTRL -> Sistema: 29. registrarEImprimirHR(idMueble)
+activate Sistema
+
+create HojaDeRuta
+Sistema -> HojaDeRuta: 30. create(mueble, tareasEstandar)
+
+Sistema -> HojaDeRuta: 31. calcularTiempoTotal()
+activate HojaDeRuta
+HojaDeRuta --> Sistema: 32. tiempoTotal
+deactivate HojaDeRuta
+
+' Regla Cátedra: SIN destroy para lista temporal
+Sistema --> CTRL: 33. hojaDeRutaGenerada
+deactivate Sistema
+
+CTRL --> UI: 34. imprimirHojaRuta(hojaDeRutaGenerada)
+deactivate CTRL
+
+UI --> Actor: 35. Emite e imprime las copias de la hoja de ruta para los operarios de sección
+deactivate UI
+
+@enduml
