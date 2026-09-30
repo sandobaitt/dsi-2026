@@ -45,7 +45,7 @@ Un rol administrativo se encarga del alta de usuarios y la configuración genera
 9. El Líder Técnico selecciona el nuevo desarrollador para ese ticket.
 10. El sistema actualiza el ticket con el nuevo desarrollador asignado.
 11. El sistema registra el cambio realizado, indicando responsable y fecha.
-12. El sistema repite los pasos 7 a 11 hasta que el Líder Técnico decide finalizar la reasignación.
+12. El sistema repite los pasos 9 a 13 hasta que el Líder Técnico decide finalizar la reasignación (bucle de reasignación).
 13. El sistema muestra un resumen de los tickets reasignados.
 
 ---

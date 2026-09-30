@@ -7,22 +7,26 @@ skinparam linetype ortho
 
 ' ==============================================================================
 ' DIAGRAMA DE CLASES: Realización de CU "Reasignar Tickets por Ausencia"
-' Aplicación: DevTrack (NubeSoft) - Materia: Diseño de Sistemas (DSI 2026)
-' - Se incluyen ÚNICAMENTE las clases involucradas en el caso de uso analizado.
-' - REGLA DE CÁTEDRA: UI y Controladores NO llevan atributos.
+' Aplicación: DevTrack (NubeSoft) - Cátedra: Diseño de Sistemas (DSI 2026)
+' 
+' REGLAS DE CÁTEDRA APLICADAS:
+' - Se incluyen ÚNICAMENTE las clases estrictamente involucradas en el caso de uso.
+' - REGLA DE ORO: UI y Controladores (CTRL, CTRLSesion) NO LLEVAN ATRIBUTOS.
 ' - Clases de dominio con atributos privados (-) y métodos públicos (+).
-' - Coherencia biunívoca total con los métodos invocados en el Diagrama de Secuencia.
+' - Tipado explícito en todos los parámetros y retornos.
+' - Coherencia biunívoca 1 a 1 con los mensajes del Diagrama de Secuencia.
 ' ==============================================================================
 
 package "Capa de Presentación y Control" {
     
     ' UI: Sin atributos. Responsable de interacción con el Líder Técnico.
     class "PantallaReasignarTickets" as UI <<Boundary>> {
-        + mostrarListaDesarrolladores(desarrolladores: List): void
-        + mostrarTicketsCandidatos(tickets: List): void
-        + mostrarDesarrolladoresDisponibles(desarrolladoresConCarga: List): void
+        + mostrarMenuOpciones(): void
+        + mostrarListaDesarrolladores(desarrolladoresEquipo: List): void
+        + mostrarTicketsCandidatos(listaTicketsCandidatos: List): void
+        + mostrarDesarrolladoresDisponibles(listaDevsConCarga: List): void
         + notificarReasignacionExitosa(): void
-        + mostrarResumenReasignados(resumen: List): void
+        + mostrarResumenReasignados(listaResumen: List): void
         + mostrarError(mensaje: String): void
     }
 
@@ -31,23 +35,24 @@ package "Capa de Presentación y Control" {
         + iniciarReasignacionAusencia(): void
         + buscarTicketsCandidatos(idDesarrollador: int): void
         + solicitarDesarrolladoresDisponibles(idTicket: int): void
-        + confirmarReasignacionTicket(idTicket: int, idNuevoDev: int): void
-        + obtenerResumenReasignaciones(): void
+        + confirmarReasignacion(idTicket: int, idNuevoDev: int): void
+        + solicitarResumenReasignaciones(): void
     }
 
-    ' Controlador de Sesión: Sin atributos. Provee credenciales del Líder activo.
+    ' Controlador de Sesión: Sin atributos. Provee la entidad del Líder activo.
     class "CTRLSesion" as CTRLSesion <<Control>> {
         + obtenerUsuarioLogueado(): LiderTecnico
     }
 
-    ' Sistema: Fachada de negocio. Conoce colecciones y administra transacciones.
+    ' Sistema: Fachada de negocio. Conoce colecciones globales y transacciones.
     class "Sistema" as Sistema <<Sistema>> {
         + obtenerDesarrolladoresEquipo(lider: LiderTecnico): List
         + obtenerTicketsActivos(idDesarrollador: int): List
-        + confirmarTicketCandidato(ticket: Ticket): void
-        + obtenerTicketsCandidatosFiltrados(): List
+        + agregarTicketCandidato(ticket: Ticket): void
+        + obtenerTicketsCandidatos(): List
         + obtenerDesarrolladoresConCarga(equipo: Equipo): List
         + registrarReasignacion(idTicket: int, idNuevoDev: int, lider: LiderTecnico): void
+        + agregarReasignacion(nuevaReasignacion: Reasignacion): void
         + obtenerResumenReasignaciones(): List
     }
 }
@@ -95,7 +100,8 @@ package "Capa de Dominio" {
         + getEstado(): String
         + getIdTarjetaTrello(): String
         + esDeDesarrolladorYActivo(idDev: int): boolean
-        + reasignarDesarrollador(nuevoDev: Desarrollador): void
+        + getDesarrolladorAsignado(): Desarrollador
+        + setDesarrolladorAsignado(nuevoDev: Desarrollador): void
     }
 
     ' Clase transaccional e histórica que registra cada cambio de asignación
