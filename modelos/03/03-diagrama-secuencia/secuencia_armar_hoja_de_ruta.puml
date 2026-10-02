@@ -1,6 +1,6 @@
 @startuml secuencia_armar_hoja_de_ruta
 !pragma layout smetana
-autonumber "<b>[00]</b>"
+autonumber
 skinparam shadowing false
 skinparam roundcorner 8
 skinparam sequenceArrowThickness 1.5
@@ -10,179 +10,134 @@ skinparam responseMessageBelowArrow true
 ' ==============================================================================
 ' DIAGRAMA DE SECUENCIA: Realización de CU "Armar Hoja de Ruta" (Camino Estándar)
 ' Modelo 03: Fábrica de Muebles Metálicos - Materia: Diseño de Sistemas (DSI 2026)
-' - CTRLSesion preexistente para usuario activo
-' - Búsqueda explícita del mueble, su plantilla y las tareas estándar
-' - Listas temporales creadas e instanciadas exclusivamente por Sistema
-' - Pre-vista clara: lista temporal de tareas y tiempo total acumulado
-' - Sin llamadas redundantes de cálculo y sin palabra clave return
-' - Coherencia total con los métodos del Diagrama de Clases
+' - Solo camino estándar de la descripción del CU
+' - Sin CTRLSesion: el CU no necesita datos del usuario logueado
+' - Recorridos hechos por Sistema: LTP (Pedidos), LTLP (Lineas_pedido), LTTAR (Tareas)
+'   Tareas empieza con T -> abreviatura TAR para no confundir con el prefijo LTT.
+' - Lista temporal LTTM (muebles de pedidos pendientes) creada y destruida por Sistema
+' - Búsqueda indexada del mueble seleccionado (sin loop)
+' - Los getters devuelven el objeto; comparaciones por atributo en la guarda
+' - El CTRL destruye la UI al finalizar
 ' ==============================================================================
 
-' 1. Participantes ordenados de izquierda a derecha
 actor "Jefe de Taller" as Actor
 boundary "UISolHR" as UI <<Boundary>>
 control "CTRLSolHR" as CTRL <<Control>>
-control "CTRLSesion" as CTRLSesion <<Control>>
 participant "Sistema" as Sistema <<Sistema>>
-collections "Pedido" as Pedidos <<Entity>>
-collections "Linea_pedido" as Lineas <<Entity>>
-collections "Mueble" as Muebles <<Entity>>
-entity "listaMueblesTemp" as ListaMueblesTemp <<Lista Temporal>>
-collections "Plantilla_tarea" as Plantillas <<Entity>>
-collections "Tarea" as Tareas <<Entity>>
-entity "listaTareasTemp" as ListaTareasTemp <<Lista Temporal>>
-entity "nuevaHR" as HojaDeRuta <<Entity>>
+participant "LTP: Pedidos" as LTP <<Entity>>
+participant "LTLP: Lineas_pedido" as LTLP <<Entity>>
+participant "Muebles" as Muebles <<Entity>>
+participant "m: Mueble" as Mueble <<Entity>>
+participant "pt: Plantilla_tarea" as Plantilla <<Entity>>
+participant "LTTAR: Tareas" as LTTAR <<Entity>>
+participant "LTTM: Muebles" as LTTM
+participant "hr: HojaDeRuta" as HojaDeRuta <<Entity>>
 
-' ------------------------------------------------------------------------------
-' FLUJO PRINCIPAL (CAMINO ESTÁNDAR)
-' ------------------------------------------------------------------------------
-
-' Paso 1: El Jefe de Taller solicita la Hoja de Ruta
-Actor -> UI: 1. solicitarArmadoHR()
+== Paso 1: El Jefe de Taller solicita armar la hoja de ruta ==
+Actor -> UI: solicitarArmadoHR()
 activate UI
-
-UI -> CTRL: 2. iniciarArmadoHR()
+UI -> CTRL: iniciarArmadoHR()
 activate CTRL
 
-' Regla Cátedra: Consulta de sesión preexistente sin pedir credenciales al actor
-CTRL -> CTRLSesion: 3. obtenerUsuarioLogueado()
-activate CTRLSesion
-CTRLSesion --> CTRL: 4. jefeTallerActivo
-deactivate CTRLSesion
-
-' Regla Cátedra: De CTRL a Sistema se usa "obtener...()"
-CTRL -> Sistema: 5. obtenerMueblesPedidosPendientes()
+== Paso 2: El sistema busca y muestra los muebles de los pedidos pendientes ==
+CTRL -> Sistema: obtenerMueblesPedidosPendientes()
 activate Sistema
 
-' Regla Cátedra: Sistema crea la lista temporal para mostrar los muebles disponibles
-create ListaMueblesTemp
-Sistema -> ListaMueblesTemp: 6. create()
+create LTTM
+Sistema -> LTTM: create()
 
-' Bucle para obtener muebles de los pedidos pendientes
-loop para cada pedido en pedidosPendientes
-    Sistema -> Pedidos: 7. getLineasPedido()
-    activate Pedidos
-    Pedidos --> Sistema: 8. lineasPedido
-    deactivate Pedidos
+loop for each p in LTP
+    Sistema -> LTP: getPedido()
+    activate LTP
+    LTP --> Sistema: p
+    deactivate LTP
 
-    loop para cada linea en lineasPedido
-        Sistema -> Lineas: 9. getMueble()
-        activate Lineas
-        Lineas --> Sistema: 10. mueble
-        deactivate Lineas
+    opt p.estado = pendiente
+        Sistema -> LTP: getLineasPedido()
+        activate LTP
+        LTP --> Sistema: LTLP
+        deactivate LTP
 
-        Sistema -> Muebles: 11. getNombre()
-        activate Muebles
-        Muebles --> Sistema: 12. nombreMueble
-        deactivate Muebles
-
-        ' Regla Cátedra: Sistema añade a la lista que ya referencia
-        Sistema -> ListaMueblesTemp: 13. add(mueble)
+        loop for each lp in LTLP
+            Sistema -> LTLP: getMueble()
+            activate LTLP
+            LTLP --> Sistema: m
+            deactivate LTLP
+            Sistema -> LTTM: add(m)
+        end
     end
 end
 
-' Regla Cátedra: SIN retorno desde ListaTemp hacia Sistema
-' Retorno con línea discontinua sin la palabra return
-Sistema --> CTRL: 14. listaMueblesTemp
+Sistema --> CTRL: LTTM
+Sistema -> LTTM: destroy()
+destroy LTTM
 deactivate Sistema
 
-' Paso 2: El Sistema muestra los diferentes muebles
-CTRL --> UI: 15. mostrarMuebles(listaMueblesTemp)
-deactivate CTRL
+CTRL -> UI: mostrarMuebles(LTTM)
+UI --> Actor: muebles de los pedidos pendientes
 
-UI --> Actor: 16. Despliega los muebles correspondientes a pedidos pendientes
-deactivate UI
+== Paso 3: El Jefe de Taller selecciona el mueble ==
+Actor -> UI: seleccionarMueble(idMueble)
+UI -> CTRL: tomarMueble(idMueble)
 
-destroy ListaMueblesTemp
-
-' Paso 3: El Jefe de Taller selecciona el mueble requerido
-Actor -> UI: 17. seleccionarMueble(idMueble)
-activate UI
-
-UI -> CTRL: 18. procesarSeleccionMueble(idMueble)
-activate CTRL
-
-CTRL -> Sistema: 19. obtenerPreVistaHR(idMueble)
+== Paso 4: El sistema carga las tareas estándar, calcula el tiempo total y muestra la vista previa ==
+CTRL -> Sistema: obtenerVistaPreviaHR(idMueble)
 activate Sistema
 
-' Búsqueda e identificación del Mueble seleccionado en la colección
-loop para cada mueble en catalogoMuebles
-    Sistema -> Muebles: 20. getIdMueble()
-    activate Muebles
-    Muebles --> Sistema: 21. idActual
-    deactivate Muebles
-end
-
-' Se obtiene la plantilla de tareas asociada al mueble específico
-Sistema -> Muebles: 22. getPlantillaTarea()
+Sistema -> Muebles: getMueble(idMueble)
 activate Muebles
-Muebles --> Sistema: 23. plantilla
+Muebles --> Sistema: m
 deactivate Muebles
 
-' Búsqueda y obtención de las tareas de la plantilla
-Sistema -> Plantillas: 24. getTareas()
-activate Plantillas
-Plantillas --> Sistema: 25. listaTareas
-deactivate Plantillas
+Sistema -> Mueble: getPlantillaTarea()
+activate Mueble
+Mueble --> Sistema: pt
+deactivate Mueble
 
-' Regla Cátedra: Sistema crea la lista temporal para la pre-vista de las tareas
-create ListaTareasTemp
-Sistema -> ListaTareasTemp: 26. create()
+Sistema -> Plantilla: getTareas()
+activate Plantilla
+Plantilla --> Sistema: LTTAR
+deactivate Plantilla
 
-' Recorrido de cada tarea para obtener sus datos de detalle y acumular la duración
-loop para cada tarea en listaTareas
-    Sistema -> Tareas: 27. getDescripcion()
-    activate Tareas
-    Tareas --> Sistema: 28. descripcion
-    deactivate Tareas
-
-    Sistema -> Tareas: 29. getDuracionEstimada()
-    activate Tareas
-    Tareas --> Sistema: 30. duracionEstimada
-    deactivate Tareas
-
-    ' Se agrega cada tarea a la lista temporal de la pre-vista
-    Sistema -> ListaTareasTemp: 31. add(tarea)
+Sistema -> Sistema: calcularTiempoTotal(LTTAR)
+activate Sistema
+loop for each ta in LTTAR (tiempoTotal += ta.duracionEstimada)
+    Sistema -> LTTAR: getTarea()
+    activate LTTAR
+    LTTAR --> Sistema: ta
+    deactivate LTTAR
 end
-
-' Cálculo único del tiempo total estimado a partir de las tareas de la plantilla
-Sistema -> Sistema: 32. calcularTiempoTotal(listaTareas)
-
-' Retorno de los datos concretos de la pre-vista: la lista de tareas y el tiempo total
-Sistema --> CTRL: 33. (listaTareasTemp, tiempoTotalEstimado)
 deactivate Sistema
 
-' Paso 4: El Sistema muestra la pre-vista de la hoja de ruta
-CTRL --> UI: 34. mostrarPreVistaHR(listaTareasTemp, tiempoTotalEstimado)
-deactivate CTRL
+Sistema --> CTRL: LTTAR, tiempoTotal
+deactivate Sistema
 
-UI --> Actor: 35. Muestra la lista de tareas estándar con sus duraciones y el tiempo total estimado
-deactivate UI
+CTRL -> UI: mostrarVistaPreviaHR(LTTAR, tiempoTotal)
+UI --> Actor: tareas estándar con sus duraciones y tiempo total estimado
 
-' Paso 5: El Jefe de Taller confirma la hoja de ruta
-Actor -> UI: 36. confirmarHojaRuta()
-activate UI
+== Paso 5: El Jefe de Taller confirma la hoja de ruta ==
+Actor -> UI: confirmarHR()
+UI -> CTRL: tomarConfirmacion()
 
-UI -> CTRL: 37. confirmarHojaRuta()
-activate CTRL
-
-' Paso 6: El Sistema registra y emite la impresión de la hoja de ruta definitiva
-CTRL -> Sistema: 38. registrarEImprimirHR(idMueble)
+== Paso 6: El sistema registra la hoja de ruta y emite las copias ==
+CTRL -> Sistema: registrarHR(idMueble, tiempoTotal)
 activate Sistema
 
 create HojaDeRuta
-Sistema -> HojaDeRuta: 39. create(mueble, tiempoTotalEstimado, listaTareas)
+Sistema -> HojaDeRuta: create(m, tiempoTotal)
 
-destroy ListaTareasTemp
+loop for each ta in LTTAR
+    Sistema -> HojaDeRuta: agregarTarea(ta)
+end
 
-' Regla Cátedra: Retorno con línea discontinua sin return
-Sistema --> CTRL: 40. hojaDeRutaGenerada
+Sistema --> CTRL: hr
 deactivate Sistema
 
-CTRL --> UI: 41. imprimirHojaRuta(hojaDeRutaGenerada)
-deactivate CTRL
+CTRL -> UI: imprimirHR(hr)
+UI --> Actor: copias impresas de la hoja de ruta
 
-UI --> Actor: 42. Emite e imprime las copias de la hoja de ruta para los operarios de sección
-deactivate UI
+CTRL -> UI: destroy()
+destroy UI
+deactivate CTRL
 
 @enduml

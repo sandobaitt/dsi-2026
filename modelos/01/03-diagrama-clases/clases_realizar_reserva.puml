@@ -11,48 +11,46 @@ skinparam linetype ortho
 ' - Se incluyen ÚNICAMENTE las clases involucradas en el caso de uso analizado.
 ' - REGLA DE CÁTEDRA: UI y Controladores NO llevan atributos.
 ' - Clases de dominio con atributos privados (-) y métodos públicos (+).
-' - Coherencia biunívoca con los métodos invocados en el Diagrama de Secuencia.
+' - Coherencia con los mensajes del Diagrama de Secuencia (verificar.py).
 ' ==============================================================================
 
 package "Capa de Presentación y Control" {
-    
+
     ' UI: Sin atributos. Responsable de interacción con el usuario.
     class "PantallaReserva" as UI <<Boundary>> {
-        + mostrarFormularioPago(montoTotal: double): void
-        + mostrarReservaConfirmada(nroReserva: int): void
-        + mostrarMensajeError(mensaje: String): void
+        + solicitarReserva(idEvento: int, cantidad: int, asientos: List): void
+        + solicitarMedioPago(importeTotal: double): void
+        + ingresarDatosPago(medioPago: String, datosPago: String): void
+        + mostrarReservaConfirmada(r: Reserva): void
     }
 
     ' Controlador del CU: Sin atributos. Coordina el flujo.
     class "CTRLRealizarReserva" as CTRL <<Control>> {
-        + iniciarReserva(idEvento: int, cantidad: int): void
-        + confirmarPagoReserva(datosPago: String): void
+        + tomarSolicitudReserva(idEvento: int, cantidad: int, asientos: List): void
+        + tomarDatosPago(medioPago: String, datosPago: String): void
     }
 
-    ' Controlador de Sesión: Sin atributos. Provee credenciales del usuario activo.
+    ' Controlador de Sesión: Sin atributos. Provee el usuario activo.
     class "CTRLSesion" as CTRLSesion <<Control>> {
         + obtenerUsuarioLogueado(): Usuario
-        + obtenerIdUsuario(): int
     }
 
-    ' Sistema: Fachada de negocio. Conoce colecciones y administra persistencia.
+    ' Sistema: Fachada de negocio. Conoce colecciones y se comunica con la entidad financiera.
     class "Sistema" as Sistema <<Sistema>> {
         + verificarDisponibilidad(idEvento: int, cantidad: int): boolean
-        + calcularMontoTotal(idEvento: int, cantidad: int): double
-        + registrarReserva(usuario: Usuario, idEvento: int, cantidad: int): int
-        + decrementarDisponibilidad(idEvento: int, cantidad: int): void
+        + calcularImporteTotal(idEvento: int, cantidad: int): double
+        + procesarPago(medioPago: String, datosPago: String, importeTotal: double): boolean
+        + registrarReserva(u: Usuario, idEvento: int, cantidad: int, asientos: List, importeTotal: double): Reserva
     }
 }
 
 package "Capa de Dominio" {
-    
+
     class "Usuario" as Usuario <<Entity>> {
         - idUsuario: int
         - nombre: String
         - email: String
-        + getIdUsuario(): int
-        + getNombre(): String
-        + getEmail(): String
+        + agregarAlCalendario(r: Reserva): void
     }
 
     class "Evento" as Evento <<Entity>> {
@@ -63,10 +61,8 @@ package "Capa de Dominio" {
         - ubicacion: String
         - precioEntrada: double
         - cupoDisponible: int
-        + getIdEvento(): int
-        + getTitulo(): String
-        + getPrecioEntrada(): double
         + tieneDisponibilidad(cantidad: int): boolean
+        + calcularImporte(cantidad: int): double
         + decrementarCupo(cantidad: int): void
     }
 
@@ -76,17 +72,13 @@ package "Capa de Dominio" {
         - fechaHoraReserva: DateTime
         - estado: String
         - montoTotal: double
-        + calcularMontoTotal(): double
+        + agregarEntrada(asiento: String): void
         + confirmar(): void
-        + getNroReserva(): int
     }
 
     class "Entrada" as Entrada <<Entity>> {
         - codigoEntrada: String
         - ubicacionAsiento: String
-        - precio: double
-        + getPrecio(): double
-        + getUbicacionAsiento(): String
     }
 }
 
@@ -104,15 +96,19 @@ Sistema o-- "*" Evento : eventosRegistrados
 Sistema o-- "*" Reserva : reservasRegistradas
 
 ' Relaciones del Modelo de Dominio
-Usuario "1" -- "*" Reserva : realiza >
+Usuario "1" -- "*" Reserva : realiza / calendario >
 Reserva "*" --> "1" Evento : corresponde a >
 Reserva "1" *-- "1..*" Entrada : compuesta por >
 
 note bottom of Reserva
-  **Clase Transaccional del CU:**
-  Relaciona directamente al Usuario
-  con el Evento reservado y
-  las Entradas asignadas.
+  **Composición:** la Reserva crea
+  sus Entradas (agregarEntrada).
+end note
+
+note right of Sistema
+  La Entidad Bancaria es un actor externo:
+  el Sistema le envía autorizarCobro(...)
+  y no se modela como clase.
 end note
 
 @enduml

@@ -41,6 +41,15 @@ El script [`render.sh`](file:///home/sando/Documents/dsi-2026/render.sh) compila
 ./render.sh -w
 ```
 
+### Verificación de coherencia Secuencia ↔ Clases ↔ CRC
+
+El script [`verificar.py`](verificar.py) controla que cada mensaje del diagrama de secuencia exista como método (con la misma cantidad de parámetros) en el diagrama de clases y en la tarjeta CRC. También detecta violaciones de las reglas de cátedra: retornos con métodos, `get` de CTRL a Sistema, actores externos no invocados por el Sistema, listas temporales sin `destroy` y UI sin `destroy` al final.
+
+```bash
+./verificar.py modelos/02                                   # carpeta de un modelo
+./verificar.py secuencia.puml clases.puml [tarjetas_crc.md]  # archivos sueltos
+```
+
 ---
 
 ## 📂 Organización de Carpetas y Artefactos
@@ -50,6 +59,7 @@ dsi-2026/
 ├── apunte.md                                # Apunte oficial de cátedra (Mateo Lopez, Agustin Carrasco, Lautaro Sandoval)
 ├── bin/plantuml                             # Wrapper CLI ejecutable de PlantUML con motor Smetana
 ├── render.sh                                # Script de automatización Bash para generar SVG
+├── verificar.py                             # Verificador de coherencia Secuencia ↔ Clases ↔ CRC
 │
 ├── casos-de-uso/                            # 1. DIAGRAMAS DE CASOS DE USO
 │   ├── plantillas/plantilla_caso_uso.puml   # Plantilla (asociaciones sin flechas, límites del sistema)

@@ -14,7 +14,7 @@
 
 | Responsabilidades | Colaboración |
 | :--- | :--- |
-| **Hacer:**<br>- Calcular el monto total sumando el valor de sus entradas asociadas.<br>- Confirmar la reserva tras la aprobación del pago.<br>- Proveer los detalles de la reserva para el calendario personal y comprobante.<br><br>**Saber:**<br>- Código identificador (`nroReserva`).<br>- Fecha y hora de emisión (`fechaHoraReserva`).<br>- Estado de la reserva (`estado`: Pendiente, Confirmada, Cancelada).<br>- Monto total liquidado (`montoTotal`). | - **Usuario:** A quien pertenece la reserva efectuada.<br>- **Evento:** Sobre el cual se realiza la reserva.<br>- **Entrada:** A quien contiene y solicita el importe unitario y asiento.<br>- **Sistema:** Quien instancia y administra la persistencia de la reserva. |
+| **Hacer:**<br>- Crear y agregar una entrada por cada asiento reservado (`agregarEntrada(asiento)`).<br>- Confirmar la reserva tras la aprobación del pago, actualizando su propio estado (`confirmar()`).<br><br>**Saber:**<br>- Código identificador (`nroReserva`).<br>- Fecha y hora de emisión (`fechaHoraReserva`).<br>- Estado de la reserva (`estado`: Pendiente, Confirmada, Cancelada).<br>- Monto total liquidado (`montoTotal`). | - **Usuario:** A quien pertenece la reserva efectuada.<br>- **Evento:** Sobre el cual se realiza la reserva.<br>- **Entrada:** A quien crea y contiene en composición.<br>- **Sistema:** Quien instancia y administra la persistencia de la reserva. |
 
 ---
 
@@ -28,7 +28,7 @@
 
 | Responsabilidades | Colaboración |
 | :--- | :--- |
-| **Hacer:**<br>- Verificar si cuenta con cupo o entradas disponibles para la cantidad requerida (`tieneDisponibilidad(cantidad)`).<br>- Decrementar el cupo de entradas disponibles al confirmarse una reserva (`decrementarCupo(cantidad)`).<br>- Proveer información del espectáculo (título, fecha, hora, lugar y precio).<br><br>**Saber:**<br>- Identificador (`idEvento`), título (`titulo`), tipo/género (`tipo`), fecha y hora (`fechaHora`), ubicación/sala (`ubicacion`), precio base de entrada (`precioEntrada`) y cupo disponible (`cupoDisponible`). | - **Sistema:** Quien consulta disponibilidad y solicita descontar cupo.<br>- **Reserva:** Quien referencia al evento reservado.<br>- **Entrada:** A quien provee el precio base para su emisión. |
+| **Hacer:**<br>- Verificar si cuenta con cupo o entradas disponibles para la cantidad requerida (`tieneDisponibilidad(cantidad)`).<br>- Calcular el importe de la cantidad de entradas solicitadas a partir de su precio (`calcularImporte(cantidad)`).<br>- Decrementar el cupo de entradas disponibles al confirmarse una reserva (`decrementarCupo(cantidad)`).<br><br>**Saber:**<br>- Identificador (`idEvento`), título (`titulo`), tipo/género (`tipo`), fecha y hora (`fechaHora`), ubicación/sala (`ubicacion`), precio base de entrada (`precioEntrada`) y cupo disponible (`cupoDisponible`). | - **Sistema:** Quien consulta disponibilidad, solicita el importe y descontar cupo.<br>- **Reserva:** Quien referencia al evento reservado. |
 
 ---
 
@@ -42,4 +42,4 @@
 
 | Responsabilidades | Colaboración |
 | :--- | :--- |
-| **Hacer:**<br>- Proveer el precio abonado y la ubicación/asiento asignado.<br>- Validar la identificación única de acceso.<br><br>**Saber:**<br>- Código de entrada (`codigoEntrada`), número de asiento/ubicación (`ubicacionAsiento`) y precio unitario (`precio`). | - **Reserva:** Quien la contiene en composición y le solicita sus datos.<br>- **Evento:** Espectáculo para el cual es válida la entrada. |
+| **Hacer:**<br>- Registrar el asiento asignado al ser creada por la reserva (`create(asiento)`).<br><br>**Saber:**<br>- Código de entrada (`codigoEntrada`) y número de asiento/ubicación (`ubicacionAsiento`). | - **Reserva:** Quien la crea y la contiene en composición. |

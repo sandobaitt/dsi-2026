@@ -10,6 +10,8 @@ skinparam linetype ortho
 ' Modelo 03: Fábrica de Muebles Metálicos - Materia: Diseño de Sistemas (DSI 2026)
 ' - Estructura basada estrictamente en el diagrama de clases del ejercicio
 ' - REGLA DE ORO DE CÁTEDRA: UISolHR y CTRLSolHR NO llevan atributos
+' - Seccion y Operario se mantienen por el diseño provisto por la cátedra,
+'   aunque no reciben mensajes en el camino estándar analizado
 ' - Clases de dominio con atributos privados (-) y métodos públicos (+)
 ' ==============================================================================
 
@@ -20,29 +22,24 @@ package "Capa de Presentación y Control" {
         + solicitarArmadoHR(): void
         + mostrarMuebles(muebles: List): void
         + seleccionarMueble(idMueble: int): void
-        + mostrarPreVistaHR(tareas: List, tiempoTotal: int): void
-        + confirmarHojaRuta(): void
-        + imprimirHojaRuta(hr: HojaDeRuta): void
+        + mostrarVistaPreviaHR(tareas: List, tiempoTotal: int): void
+        + confirmarHR(): void
+        + imprimirHR(hr: HojaDeRuta): void
     }
 
     ' Controlador del CU: Sin atributos. Coordina el flujo del CU.
     class "CTRLSolHR" as CTRL <<Control>> {
         + iniciarArmadoHR(): void
-        + procesarSeleccionMueble(idMueble: int): void
-        + confirmarHojaRuta(): void
-    }
-
-    ' Controlador de Sesión: Sin atributos. Provee credenciales del usuario activo.
-    class "CTRLSesion" as CTRLSesion <<Control>> {
-        + obtenerUsuarioLogueado(): Usuario
+        + tomarMueble(idMueble: int): void
+        + tomarConfirmacion(): void
     }
 
     ' Sistema: Fachada de negocio. Conoce colecciones de Pedido, Mueble y Seccion.
     class "Sistema" as Sistema <<Sistema>> {
         + obtenerMueblesPedidosPendientes(): List
-        + obtenerPreVistaHR(idMueble: int): HojaDeRuta
+        + obtenerVistaPreviaHR(idMueble: int): List
         + calcularTiempoTotal(tareas: List): int
-        + registrarEImprimirHR(idMueble: int): HojaDeRuta
+        + registrarHR(idMueble: int, tiempoTotal: int): HojaDeRuta
     }
 }
 
@@ -53,21 +50,17 @@ package "Capa de Dominio" {
         - fecha: Date
         - estado: String
         + getLineasPedido(): List
-        + estaPendiente(): boolean
     }
 
     class "Linea_pedido" as Linea_pedido <<Entity>> {
         - cantidad: int
         + getMueble(): Mueble
-        + getCantidad(): int
     }
 
     class "Mueble" as Mueble <<Entity>> {
         - idMueble: int
         - nombre: String
         - descripcion: String
-        + getIdMueble(): int
-        + getNombre(): String
         + getPlantillaTarea(): Plantilla_tarea
     }
 
@@ -75,15 +68,12 @@ package "Capa de Dominio" {
         - idPlantilla: int
         - descripcion: String
         + getTareas(): List
-        + getSeccion(): Seccion
     }
 
     class "Tarea" as Tarea <<Entity>> {
         - idTarea: int
         - descripcion: String
         - duracionEstimada: int
-        + getDuracionEstimada(): int
-        + getDescripcion(): String
     }
 
     class "Seccion" as Seccion <<Entity>> {
@@ -107,10 +97,7 @@ package "Capa de Dominio" {
         - fechaEmision: Date
         - tiempoTotalEstimado: int
         - estado: String
-        + calcularTiempoTotal(): int
         + agregarTarea(t: Tarea): void
-        + asignarOperario(op: Operario): void
-        + getNroHojaRuta(): int
     }
 }
 
@@ -120,7 +107,6 @@ package "Capa de Dominio" {
 
 ' Control y Navegación
 UI ..> CTRL : invoca eventos >
-CTRL --> CTRLSesion : consulta sesión >
 CTRL --> Sistema : delega operaciones >
 
 ' Sistema conoce las colecciones globales (Agregaciones rombo blanco)

@@ -1,6 +1,6 @@
 @startuml secuencia_realizar_reserva
 !pragma layout smetana
-autonumber "<b>[00]</b>"
+autonumber
 skinparam shadowing false
 skinparam roundcorner 8
 skinparam sequenceArrowThickness 1.5
@@ -10,88 +10,105 @@ skinparam responseMessageBelowArrow true
 ' ==============================================================================
 ' DIAGRAMA DE SECUENCIA: Realización de CU "Realizar Reserva" (Reserva Paga)
 ' Aplicación: Artify - Materia: Diseño de Sistemas (DSI 2026)
-' - CTRLSesion preexistente (sin ingreso manual de datos conocidos)
-' - Entidad externa bancaria tratada como ACTOR EXTERNO
-' - Nomenclatura rigurosa y retornos sin palabra "return"
-' - Coherencia total con los métodos del Diagrama de Clases
+' - Solo camino estándar de la descripción del CU
+' - Búsqueda indexada del evento (sin loop): Eventos.getEvento(idEvento)
+' - Entidad Bancaria como actor externo invocado por Sistema (asíncrono)
+' - Composición Reserva -> Entrada: la cabecera crea sus entradas
+' - Cambio de estado con mensaje de negocio: r.confirmar()
+' - CTRL destruye la UI al finalizar
 ' ==============================================================================
 
-' 1. Participantes ordenados de izquierda a derecha
-actor "Usuario" as Actor
+actor "Usuario Registrado" as Actor
 boundary "PantallaReserva" as UI <<Boundary>>
 control "CTRLRealizarReserva" as CTRL <<Control>>
 control "CTRLSesion" as CTRLSesion <<Control>>
 participant "Sistema" as Sistema <<Sistema>>
-collections "Evento" as Eventos <<Entity>>
-entity "nuevaReserva" as Reserva <<Entity>>
-actor "Entidad Bancaria" as Banco <<Actor Externo>>
+participant "Eventos" as Eventos <<Entity>>
+participant "e: Evento" as Evento <<Entity>>
+participant "u: Usuario" as Usuario <<Entity>>
+participant "r: Reserva" as Reserva <<Entity>>
+participant "en: Entrada" as Entrada <<Entity>>
+actor "Entidad Bancaria" as Banco
 
-' ------------------------------------------------------------------------------
-' FLUJO PRINCIPAL (CAMINO ESTÁNDAR)
-' ------------------------------------------------------------------------------
-
-' Paso 1: Actor solicita realizar la reserva del evento
-Actor -> UI: 1. solicitarReserva(idEvento, cantidadEntradas)
+== Paso 1: El usuario solicita reservar indicando cantidad y asientos ==
+Actor -> UI: solicitarReserva(idEvento, cantidad, asientos)
 activate UI
-
-UI -> CTRL: 2. iniciarReserva(idEvento, cantidadEntradas)
+UI -> CTRL: tomarSolicitudReserva(idEvento, cantidad, asientos)
 activate CTRL
 
-' Regla Cátedra: CTRLSesion preexistente provee credenciales del usuario activo
-CTRL -> CTRLSesion: 3. obtenerUsuarioLogueado()
+CTRL -> CTRLSesion: obtenerUsuarioLogueado()
 activate CTRLSesion
-CTRLSesion --> CTRL: 4. usuarioActivo
+CTRLSesion --> CTRL: u
 deactivate CTRLSesion
 
-' Mensaje a Sistema: coordinación de validación de negocio
-CTRL -> Sistema: 5. verificarDisponibilidad(idEvento, cantidadEntradas)
+== Paso 2: El sistema verifica disponibilidad, calcula el importe y solicita el medio de pago ==
+CTRL -> Sistema: verificarDisponibilidad(idEvento, cantidad)
 activate Sistema
-
-Sistema -> Eventos: 6. tieneDisponibilidad(cantidadEntradas)
+Sistema -> Eventos: getEvento(idEvento)
 activate Eventos
-Eventos --> Sistema: 7. disponible (true)
+Eventos --> Sistema: e
 deactivate Eventos
-
-Sistema -> Sistema: 8. calcularMontoTotal(idEvento, cantidadEntradas)
-
-' Retorno con línea discontinua sin la palabra return
-Sistema --> CTRL: 9. montoTotal
+Sistema -> Evento: tieneDisponibilidad(cantidad)
+activate Evento
+Evento --> Sistema: disponible
+deactivate Evento
+Sistema --> CTRL: disponible
 deactivate Sistema
 
-CTRL --> UI: 10. mostrarFormularioPago(montoTotal)
-deactivate CTRL
+CTRL -> Sistema: calcularImporteTotal(idEvento, cantidad)
+activate Sistema
+Sistema -> Evento: calcularImporte(cantidad)
+activate Evento
+Evento --> Sistema: importeTotal
+deactivate Evento
+Sistema --> CTRL: importeTotal
+deactivate Sistema
 
-' Paso 2: Actor selecciona medio de pago e ingresa datos
-Actor -> UI: 11. ingresarDatosPagoYConfirmar(datosPago)
-UI -> CTRL: 12. confirmarPagoReserva(datosPago)
-activate CTRL
+CTRL -> UI: solicitarMedioPago(importeTotal)
+UI --> Actor: importe total y medios de pago disponibles
 
-' Regla Cátedra: Comunicación con servicio externo hacia ACTOR EXTERNO
-CTRL -> Banco: 13. validarPago(datosPago, montoTotal)
+== Paso 3: El usuario selecciona el medio de pago, ingresa los datos y confirma ==
+Actor -> UI: ingresarDatosPago(medioPago, datosPago)
+UI -> CTRL: tomarDatosPago(medioPago, datosPago)
+
+== Pasos 4 y 5: El sistema solicita la autorización a la entidad financiera y recibe la aprobación ==
+CTRL -> Sistema: procesarPago(medioPago, datosPago, importeTotal)
+activate Sistema
+Sistema ->> Banco: autorizarCobro(medioPago, datosPago, importeTotal)
 activate Banco
-Banco --> CTRL: 14. pagoAprobado (true)
+Banco --> Sistema: pagoAprobado
 deactivate Banco
+Sistema --> CTRL: pagoAprobado
+deactivate Sistema
 
-' Paso 3: Persistencia y actualización del sistema
-CTRL -> Sistema: 15. registrarReserva(usuarioActivo, idEvento, cantidadEntradas)
+== Paso 6: El sistema registra la reserva confirmada, descuenta entradas, genera comprobantes y actualiza el calendario ==
+CTRL -> Sistema: registrarReserva(u, idEvento, cantidad, asientos, importeTotal)
 activate Sistema
 
 create Reserva
-Sistema -> Reserva: 16. create(usuarioActivo, idEvento, montoTotal)
+Sistema -> Reserva: create(u, e, importeTotal)
 
-Sistema -> Eventos: 17. decrementarCupo(cantidadEntradas)
-activate Eventos
-Eventos --> Sistema: 18. cupoActualizado
-deactivate Eventos
+loop for each asiento in asientos
+    Sistema -> Reserva: agregarEntrada(asiento)
+    activate Reserva
+    create Entrada
+    Reserva -> Entrada: create(asiento)
+    deactivate Reserva
+end
 
-' Retorno del número de reserva confirmado
-Sistema --> CTRL: 19. nroReserva
+Sistema -> Reserva: confirmar()
+Sistema -> Evento: decrementarCupo(cantidad)
+Sistema -> Usuario: agregarAlCalendario(r)
+
+Sistema --> CTRL: r
 deactivate Sistema
 
-CTRL --> UI: 20. mostrarReservaConfirmada(nroReserva)
-deactivate CTRL
+== Paso 7: El sistema informa el código de confirmación y los detalles de asistencia ==
+CTRL -> UI: mostrarReservaConfirmada(r)
+UI --> Actor: código de confirmación y detalles de asistencia
 
-UI --> Actor: 21. Despliega confirmación de reserva y añade evento al calendario
-deactivate UI
+CTRL -> UI: destroy()
+destroy UI
+deactivate CTRL
 
 @enduml

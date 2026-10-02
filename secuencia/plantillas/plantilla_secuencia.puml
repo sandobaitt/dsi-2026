@@ -1,6 +1,6 @@
 @startuml plantilla_secuencia
 !pragma layout smetana
-autonumber "<b>[00]</b>"
+autonumber
 skinparam shadowing false
 skinparam roundcorner 8
 skinparam sequenceArrowThickness 1.5
@@ -9,88 +9,95 @@ skinparam responseMessageBelowArrow true
 
 ' ==============================================================================
 ' PLANTILLA: Diagrama de Secuencia (Cátedra DSI 2026)
+' Reglas completas: .agents/skills/dsi-secuencia/SKILL.md
+' - Solo camino estándar de la descripción del CU
 ' - Orden: Actor -> UI -> CTRLCU -> CTRLSesion -> Sistema -> Dominio -> Actor Externo
-' - Servicios externos tratados directamente como ACTORES EXTERNOS
-' - CTRLSesion preexistente para credenciales (sin pedir datos conocidos al actor)
-' - Creación de listas temporales exclusiva por Sistema, sin destroy, sin return
+' - Recorridos LT + inicial (LTC: Clientes), listas temporales LTT + inicial (LTTC)
+' - Sistema hace los loops, crea/llena/destruye las listas temporales
+' - Actor externo invocado por Sistema con mensaje asíncrono (->>)
+' - CTRLCU destruye la UI al final
+' - Verificar con: ./verificar.py <carpeta>
 ' ==============================================================================
 
-' ------------------------------------------------------------------------------
-' 1. PARTICIPANTES Y ROLES
-' ------------------------------------------------------------------------------
 actor "Usuario" as Actor
 boundary "PantallaOperacion" as UI <<Boundary>>
 control "CTRLCasoDeUso" as CTRLCU <<Control>>
 control "CTRLSesion" as CTRLSesion <<Control>>
 participant "Sistema" as Sistema <<Sistema>>
-collections "EntidadColeccion" as Entidades <<Entity>>
-entity "listaTemp" as TempList <<Lista Temporal>>
-actor "ServicioExterno" as ActorExt <<Actor Externo>>
+participant "LTC: Clientes" as LTC <<Entity>>
+participant "LTTC: Clientes" as LTTC
+participant "n: Nuevo" as Nuevo <<Entity>>
+actor "ServicioExterno" as ActorExt
 
-' ------------------------------------------------------------------------------
-' 2. MENSAJES Y FLUJO DE EVENTOS
-' ------------------------------------------------------------------------------
-Actor -> UI: 1. solicitarAccion()
+== Paso 1: El actor solicita la operación ==
+Actor -> UI: solicitarOperacion()
 activate UI
-
-UI -> CTRLCU: 2. iniciarOperacion()
+UI -> CTRLCU: iniciarOperacion()
 activate CTRLCU
 
-' Consulta de sesión (preexistente)
-CTRLCU -> CTRLSesion: 3. obtenerUsuarioLogueado()
+' Solo si el CU necesita al usuario logueado
+CTRLCU -> CTRLSesion: obtenerUsuarioLogueado()
 activate CTRLSesion
-CTRLSesion --> CTRLCU: 4. usuarioActivo
+CTRLSesion --> CTRLCU: usuario
 deactivate CTRLSesion
 
-' Mensaje a Sistema: usa verbos de negocio como obtener...()
-CTRLCU -> Sistema: 5. obtenerDatosRequeridos()
+== Paso 2: El sistema busca y muestra los datos ==
+CTRLCU -> Sistema: obtenerClientesActivos()
 activate Sistema
 
-' Creación de lista temporal por Sistema
-create TempList
-Sistema -> TempList: 6. create()
+create LTTC
+Sistema -> LTTC: create()
 
-loop para cada entidad en Entidades
-    ' Mensaje a Entidad: usa getters get...()
-    Sistema -> Entidades: 7. getAtributo()
-    activate Entidades
-    Entidades --> Sistema: 8. valor
-    deactivate Entidades
+loop for each c in LTC
+    Sistema -> LTC: getCliente()
+    activate LTC
+    LTC --> Sistema: c
+    deactivate LTC
 
-    Sistema -> TempList: 9. add(valor)
+    opt c.estado = activo
+        Sistema -> LTTC: add(c)
+    end
 end
 
-' Retorno hacia el controlador (sin palabra return, sin retorno desde lista)
-Sistema --> CTRLCU: 10. listaTemp
+Sistema --> CTRLCU: LTTC
+Sistema -> LTTC: destroy()
+destroy LTTC
 deactivate Sistema
 
-CTRLCU --> UI: 11. solicitarConfirmacion(listaTemp)
-deactivate CTRLCU
+CTRLCU -> UI: mostrarClientes(LTTC)
+UI --> Actor: clientes activos
 
-Actor -> UI: 12. ingresarDatosYConfirmar()
-UI -> CTRLCU: 13. confirmarOperacion()
-activate CTRLCU
+== Paso 3: El actor selecciona y confirma ==
+Actor -> UI: seleccionarCliente(idCliente)
+UI -> CTRLCU: tomarCliente(idCliente)
 
-' Regla de Cátedra: Comunicación con servicio externo hacia ACTOR EXTERNO
-CTRLCU -> ActorExt: 14. validarConTercero(datos)
+== Paso 4: El sistema valida con el tercero y registra ==
+CTRLCU -> Sistema: registrarOperacion(usuario, idCliente)
+activate Sistema
+
+' Búsqueda indexada (un objeto puntual)
+Sistema -> LTC: getCliente(idCliente)
+activate LTC
+LTC --> Sistema: c
+deactivate LTC
+
+Sistema ->> ActorExt: validarConTercero(c)
 activate ActorExt
-ActorExt --> CTRLCU: 15. resultadoValidacion (ok)
+ActorExt --> Sistema: resultadoValidacion
 deactivate ActorExt
 
-alt Resultado Exitoso
-    CTRLCU -> Sistema: 16. registrarOperacion()
-    activate Sistema
-    Sistema --> CTRLCU: 17. confirmacion
-    deactivate Sistema
+create Nuevo
+Sistema -> Nuevo: create(usuario, c)
 
-    CTRLCU --> UI: 18. mostrarConfirmacion()
-    UI --> Actor: 19. Despliega comprobante exitoso
-else Resultado Rechazado
-    CTRLCU --> UI: 18a. mostrarError(motivo)
-    UI --> Actor: 19a. Informa el motivo del rechazo
-end
+Sistema --> CTRLCU: n
+deactivate Sistema
 
+== Paso 5: El sistema informa el resultado ==
+CTRLCU -> UI: mostrarConfirmacion(n)
+UI --> Actor: operación registrada
+
+CTRLCU -> UI: destroy()
+destroy UI
 deactivate CTRLCU
-deactivate UI
 
 @enduml

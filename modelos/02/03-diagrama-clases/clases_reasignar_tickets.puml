@@ -8,35 +8,38 @@ skinparam linetype ortho
 ' ==============================================================================
 ' DIAGRAMA DE CLASES: Realización de CU "Reasignar Tickets por Ausencia"
 ' Aplicación: DevTrack (NubeSoft) - Cátedra: Diseño de Sistemas (DSI 2026)
-' 
+'
 ' REGLAS DE CÁTEDRA APLICADAS:
-' - Se incluyen ÚNICAMENTE las clases estrictamente involucradas en el caso de uso.
-' - REGLA DE ORO: UI y Controladores (CTRL, CTRLSesion) NO LLEVAN ATRIBUTOS.
+' - Se incluyen ÚNICAMENTE las clases involucradas en el caso de uso.
+' - UI y Controladores (CTRL, CTRLSesion) NO LLEVAN ATRIBUTOS.
 ' - Clases de dominio con atributos privados (-) y métodos públicos (+).
 ' - Tipado explícito en todos los parámetros y retornos.
-' - Coherencia biunívoca 1 a 1 con los mensajes del Diagrama de Secuencia.
+' - Coherencia con los mensajes del Diagrama de Secuencia (verificar.py).
 ' ==============================================================================
 
 package "Capa de Presentación y Control" {
-    
+
     ' UI: Sin atributos. Responsable de interacción con el Líder Técnico.
     class "PantallaReasignarTickets" as UI <<Boundary>> {
-        + mostrarMenuOpciones(): void
-        + mostrarListaDesarrolladores(desarrolladoresEquipo: List): void
-        + mostrarTicketsCandidatos(listaTicketsCandidatos: List): void
-        + mostrarDesarrolladoresDisponibles(listaDevsConCarga: List): void
-        + notificarReasignacionExitosa(): void
-        + mostrarResumenReasignados(listaResumen: List): void
-        + mostrarError(mensaje: String): void
+        + seleccionarOpcionReasignar(): void
+        + mostrarDesarrolladores(desarrolladores: List): void
+        + seleccionarDesarrolladorAusente(idDevAusente: int): void
+        + mostrarTicketsCandidatos(candidatos: List): void
+        + seleccionarTicket(idTicket: int): void
+        + mostrarDesarrolladoresDisponibles(disponibles: List): void
+        + seleccionarNuevoDesarrollador(idNuevoDev: int): void
+        + mostrarReasignacionRegistrada(rea: Reasignacion): void
+        + finalizarReasignacion(): void
+        + mostrarResumen(reasignaciones: List): void
     }
 
-    ' Controlador del CU: Sin atributos. Coordina flujo, Trello y Sistema.
+    ' Controlador del CU: Sin atributos. Coordina el flujo del CU.
     class "CTRLReasignarTickets" as CTRLCU <<Control>> {
-        + iniciarReasignacionAusencia(): void
-        + buscarTicketsCandidatos(idDesarrollador: int): void
-        + solicitarDesarrolladoresDisponibles(idTicket: int): void
-        + confirmarReasignacion(idTicket: int, idNuevoDev: int): void
-        + solicitarResumenReasignaciones(): void
+        + iniciarReasignacion(): void
+        + tomarDesarrolladorAusente(idDevAusente: int): void
+        + tomarTicket(idTicket: int): void
+        + tomarNuevoDesarrollador(idNuevoDev: int): void
+        + tomarFinalizacion(): void
     }
 
     ' Controlador de Sesión: Sin atributos. Provee la entidad del Líder activo.
@@ -44,29 +47,30 @@ package "Capa de Presentación y Control" {
         + obtenerUsuarioLogueado(): LiderTecnico
     }
 
-    ' Sistema: Fachada de negocio. Conoce colecciones globales y transacciones.
+    ' Sistema: Fachada de negocio. Conoce colecciones, recorre y consulta a Trello.
     class "Sistema" as Sistema <<Sistema>> {
         + obtenerDesarrolladoresEquipo(lider: LiderTecnico): List
-        + obtenerTicketsActivos(idDesarrollador: int): List
-        + agregarTicketCandidato(ticket: Ticket): void
-        + obtenerTicketsCandidatos(): List
-        + obtenerDesarrolladoresConCarga(equipo: Equipo): List
-        + registrarReasignacion(idTicket: int, idNuevoDev: int, lider: LiderTecnico): void
-        + agregarReasignacion(nuevaReasignacion: Reasignacion): void
-        + obtenerResumenReasignaciones(): List
+        + obtenerTicketsCandidatos(idDevAusente: int): List
+        + obtenerDesarrolladoresDisponibles(lider: LiderTecnico, idDevAusente: int): List
+        + reasignarTicket(idTicket: int, idNuevoDev: int, lider: LiderTecnico): Reasignacion
+        + obtenerResumenReasignaciones(lider: LiderTecnico, idDevAusente: int, fechaActual: Date): List
     }
 }
 
 package "Capa de Dominio" {
-    
+
     class "LiderTecnico" as LiderTecnico <<Entity>> {
         - idLider: int
         - nombre: String
         - apellido: String
         - email: String
-        + getIdLider(): int
-        + getNombre(): String
         + getEquipo(): Equipo
+    }
+
+    class "Equipo" as Equipo <<Entity>> {
+        - idEquipo: int
+        - nombre: String
+        + getDesarrolladores(): List
     }
 
     class "Desarrollador" as Desarrollador <<Entity>> {
@@ -74,19 +78,7 @@ package "Capa de Dominio" {
         - nombre: String
         - apellido: String
         - email: String
-        - estadoDisponibilidad: String
-        + getIdDesarrollador(): int
-        + getNombre(): String
         + calcularCargaSprint(): int
-    }
-
-    class "Equipo" as Equipo <<Entity>> {
-        - idEquipo: int
-        - nombre: String
-        + getIdEquipo(): int
-        + getNombre(): String
-        + getDesarrolladores(): List
-        + obtenerDesarrolladoresConCarga(): List
     }
 
     class "Ticket" as Ticket <<Entity>> {
@@ -95,13 +87,7 @@ package "Capa de Dominio" {
         - prioridad: String
         - estado: String
         - idTarjetaTrello: String
-        + getIdTicket(): int
-        + getDescripcion(): String
-        + getEstado(): String
-        + getIdTarjetaTrello(): String
-        + esDeDesarrolladorYActivo(idDev: int): boolean
-        + getDesarrolladorAsignado(): Desarrollador
-        + setDesarrolladorAsignado(nuevoDev: Desarrollador): void
+        + reasignar(nuevoDev: Desarrollador): Desarrollador
     }
 
     ' Clase transaccional e histórica que registra cada cambio de asignación
@@ -109,9 +95,6 @@ package "Capa de Dominio" {
         - idReasignacion: int
         - fechaHora: DateTime
         - motivo: String
-        + getIdReasignacion(): int
-        + getFechaHora(): DateTime
-        + getDetalleResumen(): String
     }
 }
 
@@ -142,14 +125,14 @@ Reasignacion "*" --> "1" Desarrollador : devNuevo >
 
 note bottom of Reasignacion
   **Clase Transaccional e Histórica:**
-  Registra la trazabilidad inmutable de cada
+  Registra la trazabilidad de cada
   reasignación con fecha, responsable y desarrolladores.
 end note
 
-note top of CTRLCU
-  **Comunicación con Actor Externo:**
-  El controlador se comunica directamente con Trello
-  mediante mensajes asíncronos para validar el estado.
+note right of Sistema
+  **Actor externo Trello:** el Sistema le envía
+  obtenerColumnaTarjeta(idTarjetaTrello) con un
+  mensaje asíncrono. No se modela como clase.
 end note
 
 @enduml
