@@ -61,6 +61,13 @@ dsi-2026/
 ├── render.sh                                # Script de automatización Bash para generar SVG
 ├── verificar.py                             # Verificador de coherencia Secuencia ↔ Clases ↔ CRC
 │
+├── modelos/                                 # MODELOS DE EXAMEN RESUELTOS (01, 02, 03)
+│
+├── parciales/                               # EJERCICIOS DE PRÁCTICA DE PARCIAL
+│   └── ejercicio-extra/                     # BiblioUTN (enunciado.md + una carpeta por ejercicio)
+│       ├── 01-diagrama-casos-de-uso/        # Ejercicio 1: diagrama de CU completo
+│       └── 02-registrar-prestamo/           # Ejercicio 2: descripción, CRC, clases, pseudocódigo y secuencia
+│
 ├── casos-de-uso/                            # 1. DIAGRAMAS DE CASOS DE USO
 │   ├── plantillas/plantilla_caso_uso.puml   # Plantilla (asociaciones sin flechas, límites del sistema)
 │   └── ejemplos/cu_gestion_pedidos.puml     # Ejemplo resuelto (include, extend, herencia)

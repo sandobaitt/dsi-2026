@@ -1,0 +1,170 @@
+@startuml secuencia_registrar_prestamo
+!pragma layout smetana
+autonumber
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam sequenceArrowThickness 1.5
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+
+' ==============================================================================
+' DIAGRAMA DE SECUENCIA: Realización de CU "Registrar Préstamo" (Camino Estándar)
+' BiblioUTN - Ejercicio Extra 2026 (Ejercicio 2.b.iii) - Diseño de Sistemas (DSI)
+' - Solo camino estándar de la descripción del CU
+' - Sin CTRLSesion: el CU no necesita datos del bibliotecario logueado
+' - Búsquedas indexadas (sin loop): Estudiantes, Ejemplares y TiposPrestamo
+' - Estudiante es experto en su situación: vencidos, sanción vigente y cupo
+' - Lista temporal LTTEJ creada, llenada y destruida por Sistema
+' - Sistema de Alumnado: actor externo invocado por Sistema (asíncrono)
+' - Composición Prestamo -> DetallePrestamo: la cabecera crea sus detalles
+' - Cambio de estado del ejemplar con mensaje de negocio: prestar()
+' - fechaActual: fecha del sistema; cantidadEjemplares: cantidad de códigos ingresados
+' - El CTRL destruye la UI al finalizar
+' ==============================================================================
+
+actor "Bibliotecario" as Actor
+boundary "PantallaRegistrarPrestamo" as UI <<Boundary>>
+control "CTRLRegistrarPrestamo" as CTRL <<Control>>
+participant "Sistema" as Sistema <<Sistema>>
+participant "Estudiantes" as Estudiantes <<Entity>>
+participant "e: Estudiante" as Estudiante <<Entity>>
+participant "Ejemplares" as Ejemplares <<Entity>>
+participant "ej: Ejemplar" as Ejemplar <<Entity>>
+participant "LTTEJ: Ejemplares" as LTTEJ
+participant "TiposPrestamo" as Tipos <<Entity>>
+participant "tp: TipoPrestamo" as TipoPrestamo <<Entity>>
+participant "p: Prestamo" as Prestamo <<Entity>>
+participant "d: DetallePrestamo" as Detalle <<Entity>>
+actor "Sistema de Alumnado" as Alumnado
+
+== Pasos 1 y 2: El bibliotecario solicita registrar un préstamo y el sistema solicita el legajo ==
+Actor -> UI: seleccionarOpcionRegistrarPrestamo()
+activate UI
+UI -> CTRL: iniciarRegistroPrestamo()
+activate CTRL
+
+CTRL -> UI: solicitarLegajo()
+UI --> Actor: legajo del estudiante
+
+== Pasos 3 y 4: El bibliotecario ingresa el legajo; el sistema verifica al estudiante y solicita tipo y ejemplares ==
+Actor -> UI: ingresarLegajo(nroLegajo)
+UI -> CTRL: tomarLegajo(nroLegajo)
+
+CTRL -> Sistema: verificarEstudiante(nroLegajo)
+activate Sistema
+
+' Búsqueda indexada: un estudiante puntual por su legajo
+Sistema -> Estudiantes: getEstudiante(nroLegajo)
+activate Estudiantes
+Estudiantes --> Sistema: e
+deactivate Estudiantes
+
+' Actor externo: lo invoca Sistema, mensaje asíncrono
+Sistema ->> Alumnado: consultarEstudianteRegular(nroLegajo)
+activate Alumnado
+Alumnado --> Sistema: esRegular
+deactivate Alumnado
+
+' Patrón experto: el estudiante conoce sus préstamos y sanciones
+Sistema -> Estudiante: tieneLibrosVencidos(fechaActual)
+activate Estudiante
+Estudiante --> Sistema: vencidos
+deactivate Estudiante
+
+Sistema -> Estudiante: tieneSancionVigente(fechaActual)
+activate Estudiante
+Estudiante --> Sistema: sancionado
+deactivate Estudiante
+
+Sistema --> CTRL: e
+deactivate Sistema
+
+CTRL -> UI: solicitarTipoYEjemplares()
+UI --> Actor: tipos de préstamo y ejemplares a llevar
+
+== Pasos 5 y 6: El bibliotecario ingresa tipo y ejemplares; el sistema los verifica y presenta el resumen ==
+Actor -> UI: ingresarTipoYEjemplares(idTipoPrestamo, codigos)
+UI -> CTRL: tomarTipoYEjemplares(idTipoPrestamo, codigos)
+
+CTRL -> Sistema: verificarEjemplares(e, codigos)
+activate Sistema
+
+Sistema -> Estudiante: puedeLlevar(cantidadEjemplares)
+activate Estudiante
+Estudiante --> Sistema: permitido
+deactivate Estudiante
+
+create LTTEJ
+Sistema -> LTTEJ: create()
+
+' Búsqueda indexada de cada ejemplar por su código de inventario
+loop for each codigo in codigos
+    Sistema -> Ejemplares: getEjemplar(codigo)
+    activate Ejemplares
+    Ejemplares --> Sistema: ej
+    deactivate Ejemplares
+
+    Sistema -> Ejemplar: estaDisponible()
+    activate Ejemplar
+    Ejemplar --> Sistema: disponible
+    deactivate Ejemplar
+
+    Sistema -> LTTEJ: add(ej)
+end
+
+Sistema --> CTRL: LTTEJ
+deactivate Sistema
+
+CTRL -> UI: mostrarResumenPrestamo(LTTEJ)
+UI --> Actor: resumen del préstamo para confirmar
+
+== Pasos 7 y 8: El bibliotecario confirma; el sistema registra el préstamo y actualiza los ejemplares ==
+Actor -> UI: confirmarPrestamo()
+UI -> CTRL: tomarConfirmacion()
+
+CTRL -> Sistema: registrarPrestamo(e, idTipoPrestamo, LTTEJ)
+activate Sistema
+
+Sistema -> Tipos: getTipoPrestamo(idTipoPrestamo)
+activate Tipos
+Tipos --> Sistema: tp
+deactivate Tipos
+
+' Patrón experto: el tipo de préstamo conoce su plazo
+Sistema -> TipoPrestamo: calcularFechaLimite(fechaActual)
+activate TipoPrestamo
+TipoPrestamo --> Sistema: fechaLimite
+deactivate TipoPrestamo
+
+' Entidad cabecera: la crea Sistema
+create Prestamo
+Sistema -> Prestamo: create(e, tp, fechaActual)
+
+Sistema -> Estudiante: agregarPrestamo(p)
+
+' Se recorre la lista temporal que Sistema ya conoce: sin mensaje de lectura
+loop for each ej in LTTEJ
+    ' Composición: la cabecera crea sus detalles
+    Sistema -> Prestamo: agregarDetalle(ej, fechaLimite)
+    activate Prestamo
+    create Detalle
+    Prestamo -> Detalle: create(ej, fechaLimite)
+    deactivate Prestamo
+
+    ' Cambio de estado con mensaje de negocio, no con setEstado
+    Sistema -> Ejemplar: prestar()
+end
+
+Sistema --> CTRL: p
+Sistema -> LTTEJ: destroy()
+destroy LTTEJ
+deactivate Sistema
+
+CTRL -> UI: mostrarPrestamoRegistrado(p)
+UI --> Actor: préstamo registrado con las fechas límite de devolución
+
+CTRL -> UI: destroy()
+destroy UI
+deactivate CTRL
+
+@enduml

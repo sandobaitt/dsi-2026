@@ -37,9 +37,17 @@ def contar_params(args):
     return 0 if not args else len([a for a in args.split(",") if a.strip()])
 
 
+def palabras_de(nombre):
+    """Separa por espacios, guiones bajos y CamelCase: 'TiposPrestamo' -> ['Tipos', 'Prestamo']."""
+    palabras = []
+    for trozo in re.split(r"[\s_]+", nombre):
+        palabras += re.findall(r"[A-Z]+(?![a-z])|[A-Z]?[a-z0-9]+", trozo)
+    return palabras
+
+
 def variantes_singular(nombre):
-    """'Lineas_pedido' -> {'lineaspedido', 'lineapedido', ...}"""
-    palabras = [p for p in re.split(r"[\s_]+", nombre) if p]
+    """'Lineas_pedido' / 'TiposPrestamo' -> {'tiposprestamo', 'tipoprestamo', ...}"""
+    palabras = palabras_de(nombre)
     opciones = []
     for p in palabras:
         v = {p}
@@ -144,7 +152,7 @@ def clasificar(alias, p, creados):
     p["es_coleccion"] = es_lt and alias not in creados
     p["es_actor"] = p["tipo"] == "actor"
     # Colección por nombre plural sin prefijo (búsqueda indexada: "Clientes")
-    p["plural"] = not prefijo and clase_txt.endswith("s")
+    p["plural"] = not prefijo and any(w.lower().endswith("s") for w in palabras_de(clase_txt))
 
 
 def resolver_clase(p, clases):

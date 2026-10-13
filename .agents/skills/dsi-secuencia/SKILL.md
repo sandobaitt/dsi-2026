@@ -91,9 +91,11 @@ Las dos formas son válidas; se elige según lo que pide el paso:
 ### 8. Listas temporales: `LTT` + inicial de la clase
 - Se agrega una **T** más a la notación de lista: `LTTC: Clientes`, `LTTE: Eventos`, `LTTTIC: Tickets`.
 - **`Sistema` es el único responsable** de hacer el `create()` y los `add(x)` (normalmente dentro de un `loop`/`opt`).
-- **Sin flecha de retorno** desde la lista hacia `Sistema` (ya la conoce).
+- **Sin flecha de retorno** desde la lista hacia `Sistema` (ya la conoce). Por lo mismo, **recorrer** una lista temporal que el Sistema creó no lleva mensaje getter: `loop for each ej in LTTEJ` y se usa `ej` directamente (el `getX()` con retorno solo corresponde a colecciones de entidades, `LTx`).
 - `Sistema` devuelve la lista al `CTRLCU`: `Sistema --> CTRLCU: LTTC`.
-- **`destroy()`:** una vez usada, el `Sistema` le envía `destroy()` (flecha + `X`), inmediatamente después de devolverla. No se deja como "recolector de basura" al final del CU.
+- **`destroy()`:** el `Sistema` le envía `destroy()` (flecha + `X`) **cuando deja de usarla**. No se deja como "recolector de basura" al final del CU.
+  - Si la devuelve al CTRL y no la vuelve a usar: justo después de devolverla.
+  - Si el CTRL se la reenvía en un paso posterior (ej: lista de ejemplares verificada en el paso 6 y usada para registrar en el paso 8): al terminar de usarla en ese paso posterior.
   ```plantuml
   participant "LTTC: Clientes" as LTTC
   ...

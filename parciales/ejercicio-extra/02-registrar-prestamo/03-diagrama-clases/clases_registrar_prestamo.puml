@@ -1,0 +1,136 @@
+@startuml clases_registrar_prestamo
+!pragma layout smetana
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+
+' ==============================================================================
+' DIAGRAMA DE CLASES: Realización de CU "Registrar Préstamo"
+' BiblioUTN - Ejercicio Extra 2026 (Ejercicio 2.b.ii) - Diseño de Sistemas (DSI)
+' - UI y Controlador NO llevan atributos.
+' - Sin CTRLSesion: el CU no necesita datos del bibliotecario logueado.
+' - Todas las asociaciones con cardinalidad y navegabilidad (flecha = se puede
+'   navegar hacia ese extremo).
+' - Estudiante es experto en su propia situación (préstamos y sanciones);
+'   Prestamo es experto en sus detalles.
+' - El Sistema de Alumnado es un actor externo: no se modela como clase.
+' - Coherencia con la secuencia (verificar.py).
+' ==============================================================================
+
+package "Capa de Presentación y Control" {
+
+    class "PantallaRegistrarPrestamo" as UI <<Boundary>> {
+        + seleccionarOpcionRegistrarPrestamo(): void
+        + solicitarLegajo(): void
+        + ingresarLegajo(nroLegajo: int): void
+        + solicitarTipoYEjemplares(): void
+        + ingresarTipoYEjemplares(idTipoPrestamo: int, codigos: List): void
+        + mostrarResumenPrestamo(ejemplares: List): void
+        + confirmarPrestamo(): void
+        + mostrarPrestamoRegistrado(p: Prestamo): void
+        + mostrarError(mensaje: String): void
+    }
+
+    class "CTRLRegistrarPrestamo" as CTRL <<Control>> {
+        + iniciarRegistroPrestamo(): void
+        + tomarLegajo(nroLegajo: int): void
+        + tomarTipoYEjemplares(idTipoPrestamo: int, codigos: List): void
+        + tomarConfirmacion(): void
+    }
+
+    class "Sistema" as Sistema <<Sistema>> {
+        + verificarEstudiante(nroLegajo: int): Estudiante
+        + verificarEjemplares(e: Estudiante, codigos: List): List
+        + registrarPrestamo(e: Estudiante, idTipoPrestamo: int, ejemplares: List): Prestamo
+    }
+}
+
+package "Capa de Dominio" {
+
+    class "Estudiante" as Estudiante <<Entity>> {
+        - nroLegajo: int
+        - nombre: String
+        - apellido: String
+        - LIMITE_EJEMPLARES: int = 3
+        + tieneLibrosVencidos(fechaActual: Date): boolean
+        + tieneSancionVigente(fechaActual: Date): boolean
+        + puedeLlevar(cantidad: int): boolean
+        + agregarPrestamo(p: Prestamo): void
+    }
+
+    class "Sancion" as Sancion <<Entity>> {
+        - motivo: String
+        - fechaInicio: Date
+        - fechaFin: Date
+        + estaVigente(fechaActual: Date): boolean
+    }
+
+    class "Prestamo" as Prestamo <<Entity>> {
+        - nroPrestamo: int
+        - fechaPrestamo: Date
+        + agregarDetalle(ejemplar: Ejemplar, fechaLimite: Date): void
+        + tieneVencidos(fechaActual: Date): boolean
+        + cantidadPendientes(): int
+    }
+
+    class "DetallePrestamo" as DetallePrestamo <<Entity>> {
+        - fechaLimite: Date
+        - fechaDevolucion: Date
+        + estaPendiente(): boolean
+        + estaVencido(fechaActual: Date): boolean
+    }
+
+    class "TipoPrestamo" as TipoPrestamo <<Entity>> {
+        - idTipoPrestamo: int
+        - nombre: String
+        - diasPlazo: int
+        + calcularFechaLimite(fechaPrestamo: Date): Date
+    }
+
+    class "Ejemplar" as Ejemplar <<Entity>> {
+        - codigoInventario: String
+        - estado: String
+        + estaDisponible(): boolean
+        + prestar(): void
+    }
+}
+
+' ------------------------------------------------------------------------------
+' RELACIONES
+' ------------------------------------------------------------------------------
+
+' Presentación y control
+UI "1" <--> "1" CTRL : coordina
+CTRL "1" --> "1" Sistema : delega
+
+' El Sistema conoce las colecciones que el CU recorre o consulta por id
+Sistema "1" o--> "*" Estudiante : estudiantes
+Sistema "1" o--> "*" Ejemplar : ejemplares
+Sistema "1" o--> "*" TipoPrestamo : tiposPrestamo
+
+' Dominio
+Estudiante "1" <--> "*" Prestamo : prestamos / estudiante
+Estudiante "1" *--> "*" Sancion : sanciones
+Prestamo "1" *--> "1..*" DetallePrestamo : detalles
+Prestamo "*" --> "1" TipoPrestamo : tipo
+DetallePrestamo "*" --> "1" Ejemplar : ejemplar
+
+note right of Estudiante
+  LIMITE_EJEMPLARES es una constante
+  de clase (máximo de ejemplares
+  prestados al mismo tiempo).
+end note
+
+note bottom of TipoPrestamo
+  A domicilio: diasPlazo = 7
+  En sala: diasPlazo = 0 (mismo día)
+end note
+
+note bottom of Sistema
+  Sistema de Alumnado (actor externo):
+  consultarEstudianteRegular(nroLegajo)
+  Se invoca de forma asíncrona. No es clase.
+end note
+
+@enduml

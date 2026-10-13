@@ -1,0 +1,44 @@
+@startuml cu_biblioteca
+!pragma layout smetana
+left to right direction
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam roundcorner 10
+skinparam actorStyle awesome
+
+' ==============================================================================
+' DIAGRAMA DE CASOS DE USO: BiblioUTN (Ejercicio Extra 2026 - Ejercicio 1)
+' - Actores a la izquierda inician los CU; el actor externo va a la derecha.
+' - Los CU van dentro del límite del sistema; los actores, afuera.
+' - Asociaciones sin flechas.
+' - El estudiante no es actor: no usa la aplicación, el bibliotecario opera
+'   el sistema en el mostrador.
+' - Sin include/extend: verificar la condición de regular o registrar la sanción
+'   son pasos internos de los CU, no CU propios (evita descomposición funcional).
+' ==============================================================================
+
+actor "Bibliotecario" as Biblio
+actor "Administrativo" as Admin
+actor "Sistema de Alumnado" as Alumnado <<Sistema Externo>>
+
+rectangle "BiblioUTN" {
+    usecase "Registrar Préstamo" as CU01
+    usecase "Registrar Devolución" as CU02
+    usecase "Renovar Préstamo" as CU03
+    usecase "Registrar Bibliotecario" as CU04
+    usecase "Administrar Catálogo de Libros" as CU05
+    usecase "Registrar Ejemplar" as CU06
+}
+
+Biblio -- CU01
+Biblio -- CU02
+Biblio -- CU03
+
+Admin -- CU04
+Admin -- CU05
+Admin -- CU06
+
+CU01 -- Alumnado
+CU03 -- Alumnado
+
+@enduml
