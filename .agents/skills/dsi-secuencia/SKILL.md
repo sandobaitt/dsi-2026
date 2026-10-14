@@ -145,7 +145,7 @@ Las dos formas son válidas; se elige según lo que pide el paso:
 - **`loop`:** **obligatorio** al recorrer colecciones desde `Sistema` (siempre sobre un participante `LTx`). También para repeticiones que el camino estándar indica ("repite los pasos 7 a 11").
 - **`opt`:** condición simple (filtro dentro de un recorrido).
 - **`alt`:** solo si el **camino estándar** tiene dos ramas excluyentes. Los caminos alternativos de la descripción no se diagraman (§1).
-- **`ref`:** "include visual" para flujos ya documentados en otro diagrama: `ref over Sistema, Banco : Validar Pago Externo`.
+- **`ref`:** "include visual" para flujos ya documentados en otro diagrama: `ref over CTRL, Sistema, Alumnado` con el nombre del CU incluido y su resultado (`Validar Condición Regular(nroLegajo): esRegular`). El CU referenciado debe figurar como `<<include>>` en el diagrama de casos de uso. Los participantes del `ref` (incluido el actor externo) se declaran en el diagrama base, y el actor externo no recibe mensajes por fuera del `ref`.
 
 ### 13. Actores Externos
 - Los invoca **el `Sistema` directamente** (no el `CTRLCU`, no una clase interna).

@@ -6,7 +6,7 @@
 
 * `fechaActual` es la fecha del sistema.
 * Los roles de las asociaciones son los nombres del diagrama: `sistema`, `ui`, `ctrl`, `estudiantes`, `ejemplares`, `tiposPrestamo`, `prestamos`, `sanciones`, `detalles`, `tipo`, `ejemplar`.
-* `alumnado` es el actor externo (Sistema de Alumnado): no es una clase. La consulta es asíncrona y el Sistema espera su respuesta.
+* `alumnado` es el actor externo (Sistema de Alumnado): no es una clase. La consulta es asíncrona y el Sistema espera su respuesta. Solo participa en el CU incluido *Validar Condición Regular*.
 * Las validaciones que originan los caminos alternativos se resuelven con `LANZAR ErrorNegocio(mensaje, retoma)`, donde `retoma` indica cómo continúa el CU: `PASO_2`, `PASO_5` o `FIN`. Cada una lleva el número del camino alternativo de la [descripción](../01-descripcion-cu/descripcion_cu_registrar_prestamo.md).
 * La cancelación (7.a) no se modela: no modifica el dominio.
 * UI y Controlador no tienen atributos. Los datos intermedios del CU (`e`, `idTipoPrestamo`, `ejemplares`) son variables de la ejecución que viajan entre los métodos del controlador.
@@ -55,9 +55,16 @@ MÉTODO iniciarRegistroPrestamo()
 
 MÉTODO tomarLegajo(nroLegajo: int)
     INTENTAR
-        e ← sistema.verificarEstudiante(nroLegajo)
-        ui.solicitarTipoYEjemplares()
-    CAPTURAR ErrorNegocio ex                         // caminos alternativos 4.a a 4.e
+        e ← sistema.buscarEstudiante(nroLegajo)
+        esRegular ← sistema.validarCondicionRegular(nroLegajo)     // CU incluido
+        SI NO esRegular ENTONCES
+            ui.mostrarError("El estudiante no es regular")          // 4.b
+            ui.destroy()                                            // fin del CU
+        SINO
+            sistema.verificarHabilitacion(e)
+            ui.solicitarTipoYEjemplares()
+        FIN SI
+    CAPTURAR ErrorNegocio ex                         // caminos alternativos 4.a, 4.c, 4.d y 4.e
         ui.mostrarError(ex.mensaje)
         SI ex.retoma = PASO_2 ENTONCES
             ui.solicitarLegajo()
@@ -82,28 +89,28 @@ MÉTODO tomarConfirmacion()
 ### Clase `Sistema`
 
 ```text
-MÉTODO verificarEstudiante(nroLegajo: int): Estudiante
+MÉTODO buscarEstudiante(nroLegajo: int): Estudiante
     e ← BUSCAR en estudiantes el estudiante CON nroLegajo
     SI e ES NULO ENTONCES
         LANZAR ErrorNegocio("El legajo no corresponde a un estudiante", PASO_2)               // 4.a
     FIN SI
+    RETORNAR e
 
-    esRegular ← alumnado.consultarEstudianteRegular(nroLegajo)
+// CU incluido "Validar Condición Regular": lo resuelve el Sistema de Alumnado; el CU base decide cómo continuar
+MÉTODO validarCondicionRegular(nroLegajo: int): boolean
+    esRegular ← alumnado.consultarEstudianteRegular(nroLegajo)    // asíncrono, actor externo
     SI alumnado NO RESPONDE ENTONCES
         LANZAR ErrorNegocio("No se pudo obtener la situación académica", FIN)                 // 4.e
     FIN SI
-    SI NO esRegular ENTONCES
-        LANZAR ErrorNegocio("El estudiante no es regular", FIN)                               // 4.b
-    FIN SI
+    RETORNAR esRegular
 
+MÉTODO verificarHabilitacion(e: Estudiante)
     SI e.tieneLibrosVencidos(fechaActual) ENTONCES
         LANZAR ErrorNegocio("El estudiante tiene libros vencidos sin devolver", FIN)          // 4.c
     FIN SI
     SI e.tieneSancionVigente(fechaActual) ENTONCES
         LANZAR ErrorNegocio("El estudiante se encuentra sancionado", FIN)                     // 4.d
     FIN SI
-
-    RETORNAR e
 
 MÉTODO verificarEjemplares(e: Estudiante, codigos: List): List
     SI NO e.puedeLlevar(CANTIDAD(codigos)) ENTONCES

@@ -13,8 +13,9 @@ skinparam actorStyle awesome
 ' - Asociaciones sin flechas.
 ' - El estudiante no es actor: no usa la aplicación, el bibliotecario opera
 '   el sistema en el mostrador.
-' - Sin include/extend: verificar la condición de regular o registrar la sanción
-'   son pasos internos de los CU, no CU propios (evita descomposición funcional).
+' - <<include>>: Registrar Préstamo y Renovar Préstamo incluyen Validar Condición
+'   Regular (parte obligatoria y común). La flecha apunta al CU incluido y el
+'   Sistema de Alumnado se asocia a ese CU incluido.
 ' ==============================================================================
 
 actor "Bibliotecario" as Biblio
@@ -28,6 +29,10 @@ rectangle "BiblioUTN" {
     usecase "Registrar Bibliotecario" as CU04
     usecase "Administrar Catálogo de Libros" as CU05
     usecase "Registrar Ejemplar" as CU06
+    usecase "Validar Condición Regular" as CU07
+
+    CU01 ..> CU07 : <<include>>
+    CU03 ..> CU07 : <<include>>
 }
 
 Biblio -- CU01
@@ -38,7 +43,6 @@ Admin -- CU04
 Admin -- CU05
 Admin -- CU06
 
-CU01 -- Alumnado
-CU03 -- Alumnado
+CU07 -- Alumnado
 
 @enduml

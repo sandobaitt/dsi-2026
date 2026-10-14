@@ -15,7 +15,8 @@ skinparam responseMessageBelowArrow true
 ' - Búsquedas indexadas (sin loop): Estudiantes, Ejemplares y TiposPrestamo
 ' - Estudiante es experto en su situación: vencidos, sanción vigente y cupo
 ' - Lista temporal LTTEJ creada, llenada y destruida por Sistema
-' - Sistema de Alumnado: actor externo invocado por Sistema (asíncrono)
+' - Condición de regular: CU incluido Validar Condición Regular, referenciado con ref
+'   (el Sistema de Alumnado, actor externo, solo participa dentro de ese ref)
 ' - Composición Prestamo -> DetallePrestamo: la cabecera crea sus detalles
 ' - Cambio de estado del ejemplar con mensaje de negocio: prestar()
 ' - fechaActual: fecha del sistema; cantidadEjemplares: cantidad de códigos ingresados
@@ -46,11 +47,11 @@ activate CTRL
 CTRL -> UI: solicitarLegajo()
 UI --> Actor: legajo del estudiante
 
-== Pasos 3 y 4: El bibliotecario ingresa el legajo; el sistema verifica al estudiante y solicita tipo y ejemplares ==
+== Pasos 3 y 4: El bibliotecario ingresa el legajo; el sistema valida al estudiante y solicita tipo y ejemplares ==
 Actor -> UI: ingresarLegajo(nroLegajo)
 UI -> CTRL: tomarLegajo(nroLegajo)
 
-CTRL -> Sistema: verificarEstudiante(nroLegajo)
+CTRL -> Sistema: buscarEstudiante(nroLegajo)
 activate Sistema
 
 ' Búsqueda indexada: un estudiante puntual por su legajo
@@ -59,11 +60,16 @@ activate Estudiantes
 Estudiantes --> Sistema: e
 deactivate Estudiantes
 
-' Actor externo: lo invoca Sistema, mensaje asíncrono
-Sistema ->> Alumnado: consultarEstudianteRegular(nroLegajo)
-activate Alumnado
-Alumnado --> Sistema: esRegular
-deactivate Alumnado
+Sistema --> CTRL: e
+deactivate Sistema
+
+' CU incluido Validar Condición Regular (la consulta a Alumnado es asíncrona)
+ref over CTRL, Sistema, Alumnado
+    Validar Condición Regular(nroLegajo): esRegular
+end ref
+
+CTRL -> Sistema: verificarHabilitacion(e)
+activate Sistema
 
 ' Patrón experto: el estudiante conoce sus préstamos y sanciones
 Sistema -> Estudiante: tieneLibrosVencidos(fechaActual)
@@ -76,7 +82,6 @@ activate Estudiante
 Estudiante --> Sistema: sancionado
 deactivate Estudiante
 
-Sistema --> CTRL: e
 deactivate Sistema
 
 CTRL -> UI: solicitarTipoYEjemplares()

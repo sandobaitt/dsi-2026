@@ -14,7 +14,8 @@ skinparam linetype ortho
 '   navegar hacia ese extremo).
 ' - Estudiante es experto en su propia situación (préstamos y sanciones);
 '   Prestamo es experto en sus detalles.
-' - El Sistema de Alumnado es un actor externo: no se modela como clase.
+' - Validar Condición Regular es un CU incluido (ref en la secuencia); el Sistema de
+'   Alumnado es un actor externo: no se modela como clase.
 ' - Coherencia con la secuencia (verificar.py).
 ' ==============================================================================
 
@@ -40,7 +41,9 @@ package "Capa de Presentación y Control" {
     }
 
     class "Sistema" as Sistema <<Sistema>> {
-        + verificarEstudiante(nroLegajo: int): Estudiante
+        + buscarEstudiante(nroLegajo: int): Estudiante
+        + validarCondicionRegular(nroLegajo: int): boolean
+        + verificarHabilitacion(e: Estudiante): void
         + verificarEjemplares(e: Estudiante, codigos: List): List
         + registrarPrestamo(e: Estudiante, idTipoPrestamo: int, ejemplares: List): Prestamo
     }
@@ -128,9 +131,10 @@ note bottom of TipoPrestamo
 end note
 
 note bottom of Sistema
-  Sistema de Alumnado (actor externo):
-  consultarEstudianteRegular(nroLegajo)
-  Se invoca de forma asíncrona. No es clase.
+  validarCondicionRegular es el CU incluido
+  Validar Condición Regular, referenciado con ref
+  en la secuencia. El Sistema de Alumnado (actor
+  externo) solo participa en ese CU. No es clase.
 end note
 
 @enduml

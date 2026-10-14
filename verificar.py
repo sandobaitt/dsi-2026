@@ -188,7 +188,9 @@ def verificar(sec_path, cls_path, crc_path):
 
     ui_alias = next((a for a, p in participantes.items() if p["tipo"] == "boundary"), None)
     actores = [a for a, p in participantes.items() if p["tipo"] == "actor"]
-    externos = set(actores[1:])  # el primer actor declarado es el que inicia el CU
+    # El actor principal es el que origina el primer mensaje; el resto son actores externos.
+    primario = mensajes[0]["origen"] if mensajes and mensajes[0]["origen"] in actores else None
+    externos = {a for a in actores if a != primario}
     sistema_alias = next((a for a, p in participantes.items()
                           if norm(p["etiqueta"]) == "sistema"), None)
 
