@@ -3,7 +3,7 @@ name: dsi-secuencia
 description: >-
   Guía y pautas obligatorias de la cátedra para la resolución y diagramado de Diagramas de Secuencia
   y su coherencia con Diagramas de Clases y Tarjetas CRC en Diseño de Sistemas (DSI). Aplica reglas
-  estrictas de CTRLSesion preexistente, notación LTx/LTTx (ej: LTC/LTTC) para recorridos y listas temporales,
+  estrictas de CTRLSesion preexistente, actor que nunca envía listas, create() + sets desde el Sistema, notación LTx/LTTx (ej: LTC/LTTC) para recorridos y listas temporales,
   loops hechos por Sistema, búsqueda indexada vs recorrido, creación de entidades/composiciones,
   actores externos invocados por Sistema, destroy de listas temporales y de la UI, solo camino estándar,
   y verificación automática de coherencia con verificar.py.
@@ -29,6 +29,7 @@ Esta skill define las reglas obligatorias, criterios de corrección y convencion
 ### 2. Orden de participantes (izquierda → derecha)
 `Actor → Pantalla (UI) → CTRLCU → CTRLSesion → Sistema → Colecciones/Entidades → Actor Externo`
 
+- **Nombres según el apunte:** `UI[Nombre del CU]` y `CTRL[Nombre del CU]` (ej: `UIRealizarReserva`, `CTRLRealizarReserva`).
 - El **Actor Externo** (banco, AFIP, Trello, pasarela) va **siempre en el extremo derecho**.
 - Las listas temporales y las entidades nuevas van a la derecha de las colecciones (y a la izquierda del actor externo). En PlantUML, **declararlas arriba** con `participant` y usar `create <alias>` en el momento en que nacen; si no se declaran, PlantUML las agrega al final y quedan a la derecha del actor externo.
 
@@ -40,14 +41,25 @@ Esta skill define las reglas obligatorias, criterios de corrección y convencion
 ### 4. Nomenclatura de mensajes por capa
 | De → A | Forma | Ejemplos |
 | :--- | :--- | :--- |
-| `Actor → UI` | Acción de negocio del actor, sin detalles de interfaz (nada de "click", "botón") | `seleccionarOpcionReservar()`, `ingresarCantidad(cant)`, `confirmar()` |
+| `Actor → UI` | Acción de negocio del actor, sin detalles de interfaz (nada de "click", "botón"). **El actor nunca envía listas ni estructuras de datos** (ver abajo) | `seleccionarOpcionReservar()`, `seleccionarAsiento(idAsiento)`, `confirmar()` |
 | `UI → CTRLCU` | Iniciar / reenviar la acción del actor | `iniciarReserva()`, `tomarSeleccion(idEvento)` |
-| `CTRLCU → UI` | **Mensaje síncrono** (`->`) a un método de la UI | `mostrarEventos(LTTE)`, `solicitarConfirmacion()` |
+| `CTRLCU → UI` | **Mensaje síncrono** (`->`) a un método de la UI. **Puede llevar estructuras de datos como parámetro** para que la UI las muestre | `mostrarEventos(LTTE)`, `mostrarPrioridades(listaPrioridades)`, `solicitarConfirmacion()` |
 | `UI → Actor` | **Retorno punteado** con lo que se le muestra al actor. Va siempre que se le muestra algo | `UI --> Actor: eventos disponibles` |
 | `CTRLCU → Sistema` | **Verbo de negocio. Prohibido `get`** | `obtenerEventos()`, `buscarDisponibles(fecha)`, `registrarReserva(...)` |
 | `Sistema → Entidad` | **Getters formales POO** que devuelven **el objeto** | `getCliente()`, `getEvento(idEvento)`, `getEquipo()` |
+| `Entidad → Entidad` (colaboración) | Un objeto puede pedir **colecciones de datos** a otros objetos asociados mediante getters | `getPrestamos()` sobre un `Estudiante` |
 | `Sistema → Entidad` (lógica) | Mensaje de negocio a la entidad experta | `calcularImporte(cant)`, `tieneDisponibilidad(cant)`, `decrementarCupo(cant)` |
 
+- **Ingreso múltiple (Actor → UI):** si el actor debe elegir varios elementos, se dibuja un `loop` donde envía **uno por vez** y el sistema responde en cada vuelta, hasta que el actor indica que terminó. Nunca un solo mensaje con una lista (`ingresarCodigos(codigos)` ✗).
+  ```plantuml
+  loop mientras el actor no finalice la selección
+      Actor -> UI: seleccionarEjemplar(codigo)
+      UI -> CTRLCU: tomarEjemplar(codigo)
+      CTRLCU -> Sistema: agregarEjemplar(codigo)
+      CTRLCU -> UI: mostrarEjemplares(LTTEJ)
+      UI --> Actor: ejemplares elegidos hasta el momento
+  end
+  ```
 - **Se devuelve el objeto, no sus atributos:** el getter retorna `c` y a partir de ahí sus atributos se consideran conocidos. Una comparación por atributo va directo en la guarda (`opt c.estado = activo`), **sin** un `getEstado()` previo. No encadenar `getNombre()`, `getFecha()`, etc., para armar listas.
 - **Patrón Experto:** los cálculos que dependen de los datos de una entidad se delegan a ella (`e.calcularImporte(cant)`), no se hacen en `Sistema`/`CTRL` con getters.
 - **Mensajes reflexivos:** graficar explícitamente `Sistema -> Sistema: calcularTotal(...)` cuando una instancia usa un método propio.
@@ -59,6 +71,7 @@ Esta skill define las reglas obligatorias, criterios de corrección y convencion
 - **Vuelta:** línea punteada (`-->`) con **únicamente el nombre del dato retornado**.
   - ❌ `return: lista`, `retornar(lista)`, `CTRLCU --> UI: mostrarLista(lista)` (un método no va en una flecha de retorno).
   - ✔️ `Sistema --> CTRLCU: LTTE`, `LTC --> Sistema: c`.
+- **Sincronía:** síncrono = punta rellena y línea continua (`->`, estándar interno). Asíncrono = punta abierta y **línea continua** (`->>`); la línea discontinua queda **solo para los retornos** (`-->`). Asíncrono es obligatorio con Actores Externos.
 - Coherencia con clases: cada parámetro graficado figura con tipo en la firma del método (`+ tieneDisponibilidad(cant: int): boolean`).
 
 ### 6. Acceso a objetos: búsqueda indexada vs recorrido
@@ -73,6 +86,7 @@ Las dos formas son válidas; se elige según lo que pide el paso:
 
 ### 7. Recorrido de colecciones: `LT` + inicial de la clase
 - El participante que se recorre se nombra **`LT` + una letra de la clase**: `LTC: Clientes`, `LTE: Eventos`. **No se puede recorrer una clase sin esta notación.**
+- *(El PDF original escribe `LL[c]: Clientes` y `LLT[filtrados]`; en el repositorio se usa `LTC` / `LTTC`, como se indicó en clase.)*
 - **No complicarse:** si dos clases comparten inicial, o si la clase empieza con **T** (se confundiría con el prefijo de lista temporal), usar una abreviatura corta: `Camiones` → `LTCAM`, `Tickets` → `LTTIC`, `Tareas` → `LTTAR`.
 - **El loop lo hace siempre el `Sistema`** (es quien tiene el método para hacerlo), aunque la colección pertenezca a otro objeto: primero obtiene la lista del dueño (`Sistema -> eq: getDesarrolladores()` → `LTD`) y después la recorre él.
 - Dentro del `loop`, el primer mensaje obtiene el elemento y el retorno es la variable de iteración:
@@ -93,7 +107,7 @@ Las dos formas son válidas; se elige según lo que pide el paso:
 - **`Sistema` es el único responsable** de hacer el `create()` y los `add(x)` (normalmente dentro de un `loop`/`opt`).
 - **Sin flecha de retorno** desde la lista hacia `Sistema` (ya la conoce). Por lo mismo, **recorrer** una lista temporal que el Sistema creó no lleva mensaje getter: `loop for each ej in LTTEJ` y se usa `ej` directamente (el `getX()` con retorno solo corresponde a colecciones de entidades, `LTx`).
 - `Sistema` devuelve la lista al `CTRLCU`: `Sistema --> CTRLCU: LTTC`.
-- **`destroy()`:** el `Sistema` le envía `destroy()` (flecha + `X`) **cuando deja de usarla**. No se deja como "recolector de basura" al final del CU.
+- **`destroy()`:** el `Sistema` le envía `destroy()` (flecha + `X`) **cuando deja de usarla**. No se deja como "recolector de basura" al final del CU. *(La profe dijo que no hace falta en el parcial, pero es lo correcto: se incluye por si en otro año lo piden.)*
   - Si la devuelve al CTRL y no la vuelve a usar: justo después de devolverla.
   - Si el CTRL se la reenvía en un paso posterior (ej: lista de ejemplares verificada en el paso 6 y usada para registrar en el paso 8): al terminar de usarla en ese paso posterior.
   ```plantuml
@@ -115,7 +129,16 @@ Las dos formas son válidas; se elige según lo que pide el paso:
 
 ### 9. Ciclo de vida: `create()` y `destroy`
 - `create(...)` siempre que una instancia **nace durante el flujo** (entidad nueva, cabecera, detalle, lista temporal). La flecha apunta a la **cabecera (caja superior)** del nuevo objeto → en PlantUML, `create <alias>` antes del mensaje.
-- Si el objeto necesita datos iniciales, van como parámetros: `create(cliente, evento, cantidad)`.
+- **Valores y asociaciones: `create()` + `set` (uso del SET).** Darle valor a un atributo y setear asociaciones se hace con mensajes `setX(...)` **que salen siempre del Sistema**, a continuación del `create()`:
+  ```plantuml
+  create r
+  Sistema -> r: create()
+  Sistema -> r: setEvento(e)
+  Sistema -> r: setCliente(c)
+  Sistema -> r: setPago(p)
+  Sistema -> r: setAsiento(a)
+  ```
+  Si ya son muchos datos (según la profe) se hace un único set con todos: `Sistema -> n: setDatos(Datos_Tratamiento)` y una nota que aclare qué atributos incluye. Cada `setX` debe existir como método en la clase y en su CRC. *(El apunte también escribe `create(...)` en §10; el modelo preferido es `create()` + sets.)*
 - Nombre de la instancia nueva: **`r: Reserva`** (variable : Clase).
 - **Nunca llevan `create`:** `UI`, `CTRLCU`, `CTRLSesion`, `Sistema`, colecciones existentes.
 - **`destroy` va en dos lugares:**
@@ -164,7 +187,7 @@ Las dos formas son válidas; se elige según lo que pide el paso:
   ./verificar.py modelos/NN          # carpeta con secuencia + clases (+ CRC si existen)
   ./verificar.py secuencia.puml clases.puml [crc.md]
   ```
-  Reporta métodos faltantes en clases/CRC, cantidad de parámetros distinta, retornos con métodos, `get` de CTRL a Sistema, actores externos no invocados por Sistema, numeración manual, listas temporales sin `destroy` y UI sin `destroy` al final.
+  Reporta métodos faltantes en clases/CRC, cantidad de parámetros distinta, retornos con métodos, `get` de CTRL a Sistema, actores externos no invocados por Sistema, numeración manual, listas temporales sin `destroy`, UI sin `destroy` al final y actor enviando listas a la UI.
 
 ---
 
@@ -211,7 +234,7 @@ actor "<ServicioExterno>" as Externo                       ' siempre a la derech
 7. **Actores externos:** `Sistema ->> Externo` y respuesta `-->`.
 8. **Alta de entidades:** `Sistema` hace `create(...)` de la entidad/cabecera; la cabecera crea sus detalles.
 9. **Cierre:** `Sistema --> CTRLCU: resultado`, `CTRLCU -> UI: mostrarX(...)`, `UI --> Actor: ...`, `CTRLCU -> UI: destroy()`.
-10. **Actualizar clases y CRC** con cada método recibido y **correr `./verificar.py`**. Renderizar con `./render.sh <archivo.puml>`.
+10. **Completar clases y CRC al final** (orden del apunte: primero el diagrama de clases sin métodos, después la secuencia, y recién ahí cada clase recibe sus métodos y atributos; la CRC se deja para lo último) y **correr `./verificar.py`**. Renderizar con `./render.sh <archivo.puml>`.
 
 ---
 
@@ -226,6 +249,8 @@ actor "<ServicioExterno>" as Externo                       ' siempre a la derech
 - [ ] Listas temporales `LTTx` creadas y llenadas solo por `Sistema`, sin retorno desde la lista, con `destroy()` después de usarse.
 - [ ] Entidades nuevas como `var: Clase`, creadas por `Sistema`; detalles creados por la cabecera.
 - [ ] Cambios de estado con mensajes de negocio, no con `setEstado`.
+- [ ] El actor nunca envía listas a la UI (selección múltiple con `loop`, un elemento por vez).
+- [ ] Valores y asociaciones con `create()` + `setX(...)` desde el Sistema.
 - [ ] Retornos punteados solo con el nombre del dato; métodos de UI como mensajes síncronos; `UI --> Actor` cuando se le muestra algo.
 - [ ] Actores externos invocados por `Sistema` con `->>`.
 - [ ] El `CTRLCU` destruye la UI al final.

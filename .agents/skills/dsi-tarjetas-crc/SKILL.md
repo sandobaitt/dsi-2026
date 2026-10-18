@@ -18,6 +18,12 @@ Esta skill establece las reglas y formato oficial de la cátedra de **Diseño de
 ### 1. Coherencia Absoluta con el Diagrama de Clases
 - **Correspondencia 1 a 1:** Cada clase que aparezca en el Diagrama de Clases de la Realización debe tener obligatoriamente su tarjeta CRC (incluyendo `UI`, `CTRL`, `CTRLSesion`, `Sistema` y cada entidad de dominio).
 
+### 1.b Se hacen al final y salen del diagrama de clases
+- Las CRC se dejan para lo último: ya hecho el diagrama de clases con los métodos de la secuencia, **salen rápido**.
+- **Responsabilidades:** se arman mirando **los métodos de la clase**, cada uno redactado como lo que la clase sabe hacer o conocer. Ej: `setEvento()` = *"Conocer el evento correspondiente a la reserva"*; `create()` = *"Crear una reserva"*. Así con todos los métodos.
+- **Colaboración:** se arman mirando **las asociaciones del diagrama de clases** y escribiendo los nombres de las clases asociadas (ej: `Reserva` colabora con `Evento`, `Cliente` y `Pago`).
+- *(En el parcial, por lo visto, piden solo 3 tarjetas.)* Si la consigna lo limita (ej: "3 tarjetas CRC, solo entidades, excepto Sistema"), se respeta la consigna; si no, una por cada clase del diagrama.
+
 ### 2. Foco Estricto en el Caso de Uso
 - No listar responsabilidades globales o hipotéticas del sistema. Listar **únicamente** lo que la clase realiza y conoce para dar cumplimiento al caso de uso analizado.
 

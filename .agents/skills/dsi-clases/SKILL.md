@@ -4,7 +4,8 @@ description: >-
   Guía y pautas obligatorias de cátedra para el Diagrama de Clases de la Realización de Casos de Uso
   en Diseño de Sistemas (DSI 2026). Aplica la regla crítica de UI y Controladores SIN ATRIBUTOS,
   asignación de métodos según responsabilidades (UI, CTRL, Sistema, Dominio), relaciones estructurales
-  y correspondencia biunívoca con los mensajes del Diagrama de Secuencia.
+  nombres en singular, multiplicidad/navegabilidad, fórmulas de lectura de composición/agregación y correspondencia biunívoca
+  con los mensajes del Diagrama de Secuencia.
 ---
 
 # Skill: Diagrama de Clases (Realización de CU) - Pautas de Cátedra (DSI 2026)
@@ -14,6 +15,12 @@ Esta skill establece las reglas y criterios de evaluación de la cátedra de **D
 ---
 
 ## 📌 Reglas de Oro de la Cátedra (Checklist de Parcial)
+
+### 0. Orden de trabajo (según el apunte)
+1. Primero se dibuja el diagrama de clases **sin métodos ni atributos** (solo las clases y sus relaciones).
+2. Se hace el diagrama de secuencia.
+3. Terminada la secuencia, por cada clase se escriben los **métodos que se idearon y usaron ahí**, y lo mismo con los atributos.
+4. Las tarjetas CRC se hacen al final: salen directo del diagrama de clases completo.
 
 ### 1. Alcance Restringido al Caso de Uso
 - Se grafican **únicamente** las clases que participan activamente en el caso de uso analizado.
@@ -27,7 +34,7 @@ Esta skill establece las reglas y criterios de evaluación de la cátedra de **D
 > **"Importante: Las clases UI y Controlador no llevan atributos."** *(Apunte Parcial Práctico 2026)*
 
 - **`UI`:** Responsable exclusivo de la interacción con el usuario. **Cero atributos**. Métodos típicos: recibir datos, mostrar información, mostrar confirmaciones o alertas de error.
-- **`CTRL`:** Coordina la ejecución del caso de uso. **Cero atributos**. Métodos típicos: iniciar acción del CU, recibir eventos de UI, coordinar el flujo, despachar mensajes al Sistema o Dominio.
+- **`CTRL`:** Coordina la ejecución del caso de uso. **Cero atributos**. Métodos típicos: iniciar acción del CU, recibir eventos de UI, coordinar el flujo, despachar mensajes al Sistema o Dominio. **Delega a la UI lo que hay que mostrar o pedir**, y esos mensajes pueden llevar estructuras de datos como parámetros (`mostrarPrioridades(listaPrioridades)`).
 - **`CTRLSesion`:** Provee credenciales y contexto del usuario activo. **Cero atributos**.
 - **`Sistema`:** Mantiene/conoce las colecciones globales, busca instancias, realiza altas de objetos y cálculos globales.
 - **Clases de Dominio:** Entidades del negocio (*Cliente*, *Pedido*, *Producto*). **Sí contienen atributos** (visibilidad privada `-`) y métodos (`+`).
@@ -41,11 +48,14 @@ Esta skill establece las reglas y criterios de evaluación de la cátedra de **D
 6. **Especificación Obligatoria de Parámetros:** Si una operación requiere datos de entrada, **es obligatorio especificar los parámetros con sus tipos** en la firma del método (ej: `+ seleccionarMueble(idMueble: int): void`, `+ calcularTiempoTotal(tareas: List): int`). Prohibido dejar paréntesis vacíos en métodos que procesan argumentos.
 
 ### 4. Relaciones y Notaciones
-- **Herencia / Generalización (`<|--`):** Línea sólida con triángulo hueco hacia el padre.
-- **Composición (`*--`):** Rombo relleno en el "todo" (ciclo de vida fuertemente ligado).
-- **Agregación (`o--`):** Rombo hueco en el contenedor (ej: colecciones en `Sistema`).
+- **Herencia / Generalización (`<|--`):** Línea sólida con triángulo hueco hacia el padre. **No lleva multiplicidad en los extremos.**
+- **Composición (`*--`):** Rombo relleno en el "todo" (ciclo de vida de las partes dependiente del todo). Lectura: del Todo a las Partes *"está compuesto por…"* / *"posee exclusivamente como parte a…"*; de la Parte al Todo *"forma parte de / pertenece a…"*.
+- **Agregación (`o--`):** Rombo hueco en el contenedor (ej: colecciones en `Sistema`). Ciclo de vida independiente: los elementos pueden existir por fuera del contenedor y siguen existiendo si este se elimina o resetea. Lectura: *"agrupa a…"*, *"contiene a…"*, *"está conformado por…"*.
 - **Asociación simple (`--`):** Relación estructural con multiplicidades (`1`, `*`, `0..1`).
 - **Dependencia (`..>`):** Línea punteada con flecha (ej. UI invocando al CTRL).
+- **Multiplicidad:** se lee **mirando el extremo opuesto**. `Cliente "1" -- "1..*" Reserva` = un Cliente tiene de 1 a muchas Reservas, y una Reserva pertenece a un solo Cliente.
+- **Navegabilidad:** la flecha indica hacia qué clase se puede navegar (quién conoce a quién).
+- **Nombres de clase en singular:** `Paciente`, no `Pacientes`.
 - *(Nota de cátedra: clases DTO y alcance estático no se evalúan en la práctica).*
 
 ---

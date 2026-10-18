@@ -217,6 +217,13 @@ def verificar(sec_path, cls_path, crc_path):
             continue
         metodo, nparams = metodo_m.group(1), contar_params(metodo_m.group(2))
 
+        # El actor nunca envía listas ni estructuras de datos a la UI (ingreso múltiple con loop)
+        if o == primario and pd["tipo"] == "boundary":
+            for par in (x.strip() for x in metodo_m.group(2).split(",") if x.strip()):
+                nombre = par.split(":")[0].strip()
+                if re.search(r"lista|list\b", nombre, re.I) or (len(nombre) > 3 and nombre.endswith("s") and not nombre.endswith("ss")):
+                    warn(n, f"el actor envía '{nombre}' a la UI: parece una lista (usar un loop, un elemento por vez)")
+
         # Reglas de capa
         if po["tipo"] == "control" and d == sistema_alias and metodo.startswith("get"):
             err(n, f"'{metodo}' de CTRL a Sistema: usar verbo de negocio, no get")

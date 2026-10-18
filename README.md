@@ -14,9 +14,16 @@ Siguiendo el orden oficial de resolución establecido por la cátedra:
 2. Descripción de Caso de Uso (Especificación textual paso a paso del CU)
    ↓
 3. Realización del Caso de Uso (Para el CU seleccionado exclusivamente):
-   ├── 3.1. Diagrama de Clases (Únicamente clases del CU; UI y CTRL sin atributos)
-   ├── 3.2. Tarjetas CRC (Anverso/Reverso para cada clase del diagrama)
-   └── 3.3. Diagrama de Secuencia (Flujo temporal con CTRLSesion y pautas de cátedra)
+   ├── 3.1. Diagrama de Clases (primero SIN métodos ni atributos; UI y CTRL nunca llevan atributos)
+   ├── 3.2. Diagrama de Secuencia (flujo temporal; de acá salen los métodos y atributos de cada clase)
+   ├── 3.1'. Completar el Diagrama de Clases con los métodos y atributos usados en la secuencia
+   └── 3.3. Tarjetas CRC (al final: salen directo del diagrama de clases)
+   ↓
+4. Máquina de Estados (ciclo de vida de un objeto)
+   ↓
+5. Patrones de Diseño (identificar, justificar y diagramar)
+
+Extra: Diagrama de clases en Java
 ```
 
 ---
@@ -93,7 +100,10 @@ dsi-2026/
     ├── dsi-descripcion-cu/SKILL.md          # Reglas para descripción (lenguaje generalista, no repetir precondición)
     ├── dsi-clases/SKILL.md                  # Reglas para clases (UI y CTRL sin atributos, correspondencia con métodos)
     ├── dsi-tarjetas-crc/SKILL.md            # Reglas para CRC (formato Frente/Dorso, coherencia 1 a 1 con clases)
-    └── dsi-secuencia/SKILL.md               # Reglas para secuencia (CTRLSesion, listas temporales por Sistema)
+    ├── dsi-secuencia/SKILL.md               # Reglas para secuencia (CTRLSesion, listas temporales por Sistema)
+    ├── dsi-maquina-estados/SKILL.md         # Reglas para máquina de estados (4 pasos, estados compuestos)
+    ├── dsi-patrones-diseno/SKILL.md         # Cómo elegir y diagramar patrones (Singleton … Iterator)
+    └── dsi-clases-java/SKILL.md             # Pasar el diagrama de clases a Java (relaciones y multiplicidades)
 ```
 
 ---
